@@ -151,9 +151,15 @@
                             </Grid.ColumnDefinitions>
 
                             <StackPanel>
-                                <TextBlock Text="TRANSFER LOCATIONS" Style="{StaticResource EyebrowTextStyle}" />
+                                <TextBlock Text="TRANSFER LOCATIONS"
+                                           FontSize="14"
+                                           FontWeight="Bold"
+                                           Foreground="{DynamicResource TextBrush}" />
                                 <TextBlock Text="Choose what to copy and where it should go"
-                                           Style="{StaticResource MutedTextStyle}"
+                                           FontSize="13"
+                                           Foreground="{DynamicResource TextBrush}"
+                                           MaxWidth="240"
+                                           HorizontalAlignment="Left"
                                            TextWrapping="Wrap"
                                            Margin="0,1,0,0" />
                             </StackPanel>
@@ -187,54 +193,36 @@
 
                             <TextBlock Text="SOURCE"
                                        Style="{StaticResource EyebrowTextStyle}"
+                                       Foreground="{DynamicResource TextBrush}"
                                        Margin="0,1,7,1"
                                        VerticalAlignment="Center" />
 
-                            <Grid Grid.Row="1" Margin="0,0,7,2">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <TextBox Text="{Binding SourcePath, UpdateSourceTrigger=PropertyChanged}"
-                                         Height="30"
-                                         IsReadOnly="{Binding IsBusy}"
-                                         ToolTip="Source directory"
-                                         AutomationProperties.Name="Source folder" />
-                                <Button Grid.Column="1"
-                                        Content="&#x2026;"
-                                        Width="30"
-                                        Height="30"
-                                        Padding="0"
-                                        Margin="5,0,0,0"
-                                        ToolTip="Browse for source folder"
-                                        Command="{Binding BrowseSourceCommand}" />
-                            </Grid>
+                            <Button Grid.Row="1"
+                                    Style="{StaticResource TransferPathButtonStyle}"
+                                    Command="{Binding BrowseSourceCommand}"
+                                    Margin="0,0,7,2"
+                                    ToolTip="Choose source folder"
+                                    AutomationProperties.Name="Choose source folder">
+                                <TextBlock Text="{Binding SourcePathDisplay}"
+                                           TextTrimming="CharacterEllipsis" />
+                            </Button>
 
                             <TextBlock Grid.Row="2"
                                        Text="DESTINATION"
                                        Style="{StaticResource EyebrowTextStyle}"
+                                       Foreground="{DynamicResource TextBrush}"
                                        Margin="0,1,7,1"
                                        VerticalAlignment="Center" />
 
-                            <Grid Grid.Row="3" Margin="0,0,7,0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <TextBox Text="{Binding DestinationPath, UpdateSourceTrigger=PropertyChanged}"
-                                         Height="30"
-                                         IsReadOnly="{Binding IsBusy}"
-                                         ToolTip="Destination directory"
-                                         AutomationProperties.Name="Destination folder" />
-                                <Button Grid.Column="1"
-                                        Content="&#x2026;"
-                                        Width="30"
-                                        Height="30"
-                                        Padding="0"
-                                        Margin="5,0,0,0"
-                                        ToolTip="Browse for destination folder"
-                                        Command="{Binding BrowseDestinationCommand}" />
-                            </Grid>
+                            <Button Grid.Row="3"
+                                    Style="{StaticResource TransferPathButtonStyle}"
+                                    Command="{Binding BrowseDestinationCommand}"
+                                    Margin="0,0,7,0"
+                                    ToolTip="Choose destination folder"
+                                    AutomationProperties.Name="Choose destination folder">
+                                <TextBlock Text="{Binding DestinationPathDisplay}"
+                                           TextTrimming="CharacterEllipsis" />
+                            </Button>
 
                             <Button Grid.Column="1"
                                     Grid.RowSpan="4"
@@ -248,7 +236,7 @@
                                     AutomationProperties.Name="Swap source and destination">
                                 <TextBlock Text="&#x2191;  &#x2193;"
                                            TextAlignment="Center"
-                                           FontSize="20"
+                                           FontSize="14"
                                            FontWeight="Normal" />
                             </Button>
                         </Grid>

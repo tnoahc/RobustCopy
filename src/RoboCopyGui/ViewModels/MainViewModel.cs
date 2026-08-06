@@ -91,14 +91,31 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
     public string SourcePath
     {
         get => _sourcePath;
-        set { if (SetProperty(ref _sourcePath, value)) RefreshPreview(); }
+        set
+        {
+            if (SetProperty(ref _sourcePath, value))
+            {
+                OnPropertyChanged(nameof(SourcePathDisplay));
+                RefreshPreview();
+            }
+        }
     }
 
     public string DestinationPath
     {
         get => _destinationPath;
-        set { if (SetProperty(ref _destinationPath, value)) RefreshPreview(); }
+        set
+        {
+            if (SetProperty(ref _destinationPath, value))
+            {
+                OnPropertyChanged(nameof(DestinationPathDisplay));
+                RefreshPreview();
+            }
+        }
     }
+
+    public string SourcePathDisplay => string.IsNullOrWhiteSpace(SourcePath) ? "Source directory here" : SourcePath;
+    public string DestinationPathDisplay => string.IsNullOrWhiteSpace(DestinationPath) ? "Destination directory here" : DestinationPath;
 
     public string FilePatterns
     {

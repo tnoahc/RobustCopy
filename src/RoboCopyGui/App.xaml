@@ -24,8 +24,8 @@
         <SolidColorBrush x:Key="WarningBrush" Color="#9A6827" />
         <SolidColorBrush x:Key="DangerBrush" Color="#A5423D" />
         <SolidColorBrush x:Key="DangerSoftBrush" Color="#F1DAD3" />
-        <SolidColorBrush x:Key="TransferClearBrush" Color="#FF7A1A" />
-        <SolidColorBrush x:Key="TransferSwapBrush" Color="#F04B20" />
+        <SolidColorBrush x:Key="TransferClearBrush" Color="#FFC000" />
+        <SolidColorBrush x:Key="TransferSwapBrush" Color="#4472C4" />
         <SolidColorBrush x:Key="HighlightBrush" Color="#FFFFFBF4" />
 
         <DropShadowEffect x:Key="RaisedShadowEffect"
@@ -197,6 +197,44 @@
             <Setter Property="BorderBrush" Value="{DynamicResource DangerBrush}" />
             <Setter Property="Foreground" Value="{DynamicResource DangerBrush}" />
             <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+
+        <Style x:Key="TransferPathButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0,2" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="FontSize" Value="10.5" />
+            <Setter Property="FontWeight" Value="Normal" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="PathButtonBorder"
+                                Background="{TemplateBinding Background}"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="PathButtonBorder" Property="Background" Value="{DynamicResource SurfaceAlternativeBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="PathButtonBorder" Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="PathButtonBorder" Property="Background" Value="{DynamicResource SurfacePressedBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.5" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
 
         <Style x:Key="OptionToggleStyle" TargetType="ToggleButton">
