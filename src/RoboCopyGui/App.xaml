@@ -24,6 +24,8 @@
         <SolidColorBrush x:Key="WarningBrush" Color="#9A6827" />
         <SolidColorBrush x:Key="DangerBrush" Color="#A5423D" />
         <SolidColorBrush x:Key="DangerSoftBrush" Color="#F1DAD3" />
+        <SolidColorBrush x:Key="TransferClearBrush" Color="#FF7A1A" />
+        <SolidColorBrush x:Key="TransferSwapBrush" Color="#F04B20" />
         <SolidColorBrush x:Key="HighlightBrush" Color="#FFFFFBF4" />
 
         <DropShadowEffect x:Key="RaisedShadowEffect"

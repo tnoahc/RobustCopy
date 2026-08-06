@@ -161,13 +161,14 @@
                             <Button Grid.Column="1"
                                     Content="Clear"
                                     Command="{Binding ClearPathsCommand}"
-                                    Width="58"
+                                    Width="44"
                                     Height="28"
                                     Padding="5,2"
                                     Margin="8,0,0,0"
                                     VerticalAlignment="Center"
-                                    Background="{DynamicResource AccentSoftBrush}"
-                                    BorderBrush="{DynamicResource AccentBrush}"
+                                    Background="{DynamicResource TransferClearBrush}"
+                                    BorderBrush="{DynamicResource TransferClearBrush}"
+                                    Foreground="{DynamicResource TextBrush}"
                                     ToolTip="Clear source and destination"
                                     AutomationProperties.Name="Clear transfer locations" />
                         </Grid>
@@ -175,7 +176,7 @@
                         <Grid Grid.Row="1" Margin="7,0,7,8">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="96" />
+                                <ColumnDefinition Width="44" />
                             </Grid.ColumnDefinitions>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
@@ -240,6 +241,9 @@
                                     Command="{Binding SwapCommand}"
                                     Margin="0"
                                     Padding="3,2"
+                                    Background="{DynamicResource TransferSwapBrush}"
+                                    BorderBrush="{DynamicResource TransferSwapBrush}"
+                                    Foreground="{DynamicResource TextBrush}"
                                     ToolTip="Swap source and destination"
                                     AutomationProperties.Name="Swap source and destination">
                                 <TextBlock Text="&#x2191;  &#x2193;"
