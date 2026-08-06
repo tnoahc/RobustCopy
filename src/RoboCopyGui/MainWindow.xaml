@@ -5,9 +5,9 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
         Title="RoboCopy GUI"
-        Width="1280"
+        Width="1480"
         Height="830"
-        MinWidth="1050"
+        MinWidth="1200"
         MinHeight="700"
         WindowStartupLocation="CenterScreen"
         Closing="Window_Closing">
@@ -21,7 +21,7 @@
         <!-- Raised application header -->
         <Border Grid.Row="0"
                 Style="{StaticResource CardStyle}"
-                Padding="18,12"
+                Padding="9,6"
                 Margin="20,14,20,0">
             <Grid>
                 <Grid.ColumnDefinitions>
@@ -52,7 +52,7 @@
                 </StackPanel>
 
                 <Border Grid.Column="2"
-                        Padding="14,7"
+                        Padding="7,3.5"
                         CornerRadius="14"
                         Background="{DynamicResource AccentSoftBrush}"
                         BorderBrush="{DynamicResource AccentBrush}"
@@ -71,20 +71,27 @@
 
         <Grid Grid.Row="1" Margin="20,20,20,18">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="0.96*" MinWidth="470" />
-                <ColumnDefinition Width="20" />
-                <ColumnDefinition Width="1.04*" MinWidth="520" />
+                <ColumnDefinition Width="0.92*" MinWidth="340" />
+                <ColumnDefinition Width="18" />
+                <ColumnDefinition Width="1.02*" MinWidth="380" />
+                <ColumnDefinition Width="18" />
+                <ColumnDefinition Width="1.06*" MinWidth="400" />
             </Grid.ColumnDefinitions>
 
-            <!-- Configuration column -->
-            <Grid Grid.Column="0">
+            <!-- Location and copy-option columns share this grid so their rows stay aligned. -->
+            <Grid Grid.Column="0" Grid.ColumnSpan="3">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="0.92*" />
+                    <ColumnDefinition Width="18" />
+                    <ColumnDefinition Width="1.02*" />
+                </Grid.ColumnDefinitions>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
-                    <RowDefinition Height="18" />
+                    <RowDefinition Height="14" />
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
 
-                <Border Style="{StaticResource CardStyle}" Padding="16">
+                <Border Style="{StaticResource CardStyle}" Padding="8">
                     <StackPanel>
                         <TextBlock Text="TRANSFER LOCATIONS" Style="{StaticResource EyebrowTextStyle}" />
                         <TextBlock Text="Choose what to copy and where it should go"
@@ -157,13 +164,13 @@
                                     Content="&#x21C5;  Swap locations"
                                     Height="38"
                                     Margin="12,21,0,0"
-                                    Padding="14,7"
+                                    Padding="7,3.5"
                                     Command="{Binding SwapCommand}" />
                         </Grid>
                     </StackPanel>
                 </Border>
 
-                <Border Grid.Row="2" Style="{StaticResource CardStyle}" Padding="0">
+                <Border Grid.Column="2" Grid.Row="0" Grid.RowSpan="3" Style="{StaticResource CardStyle}" Padding="0">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
@@ -196,7 +203,7 @@
                                                     BorderBrush="{DynamicResource AccentBrush}"
                                                     BorderThickness="0,0,0,1"
                                                     CornerRadius="8"
-                                                    Padding="11,7"
+                                                    Padding="5.5,3.5"
                                                     Margin="14,8,14,4">
                                                 <TextBlock Text="{Binding Name}"
                                                            FontSize="10.5"
@@ -281,7 +288,7 @@
                                                         <TextBlock Text="{Binding Label}" FontWeight="SemiBold" />
                                                         <Border Background="{DynamicResource SurfaceAlternativeBrush}"
                                                                 CornerRadius="6"
-                                                                Padding="6,2"
+                                                                Padding="3,1"
                                                                 Margin="8,-1,0,0">
                                                             <TextBlock Text="{Binding Flag}"
                                                                        Foreground="{DynamicResource AccentBrush}"
@@ -303,7 +310,7 @@
                                                  Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
                                                  IsEnabled="{Binding IsSelected}"
                                                  Visibility="{Binding HasValue, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                                 Padding="8,6"
+                                                 Padding="4,3"
                                                  Margin="10,0,0,0"
                                                  VerticalAlignment="Center" />
                                     </Grid>
@@ -328,19 +335,62 @@
                         </Grid>
                     </Grid>
                 </Border>
+
+                <Border Grid.Row="2" Style="{StaticResource CardStyle}" Padding="7">
+                    <StackPanel>
+                        <Grid>
+                            <TextBlock Text="Review command before running" Style="{StaticResource SectionTitleStyle}" />
+                            <Button Content="Copy"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Center"
+                                    Padding="5,2.5"
+                                    Command="{Binding CopyCommandCommand}" />
+                        </Grid>
+
+                        <TextBox Text="{Binding CommandPreview, Mode=OneWay}"
+                                 IsReadOnly="True"
+                                 FontFamily="Cascadia Mono, Consolas"
+                                 FontSize="11"
+                                 TextWrapping="Wrap"
+                                 MinHeight="72"
+                                 MaxHeight="110"
+                                 VerticalScrollBarVisibility="Auto"
+                                 Margin="0,8,0,0" />
+
+                        <Border Background="{DynamicResource DangerSoftBrush}"
+                                BorderBrush="{DynamicResource DangerBrush}"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                Padding="4,2.5"
+                                Margin="0,7,0,0">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding ValidationText}" Value="">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <TextBlock Text="{Binding ValidationText}"
+                                       Foreground="{DynamicResource DangerBrush}"
+                                       TextWrapping="Wrap"
+                                       FontSize="11.5" />
+                        </Border>
+                    </StackPanel>
+                </Border>
             </Grid>
 
             <!-- Progress and output column -->
-            <Grid Grid.Column="2">
+            <Grid Grid.Column="4">
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="14" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="14" />
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
 
-                <Border Style="{StaticResource CardStyle}" Padding="14">
+                <Border Style="{StaticResource CardStyle}" Padding="7">
                     <StackPanel>
                         <Grid>
                             <Grid.ColumnDefinitions>
@@ -358,7 +408,7 @@
                             <Border Grid.Column="1"
                                     Background="{DynamicResource AccentSoftBrush}"
                                     CornerRadius="12"
-                                    Padding="10,5"
+                                    Padding="5,2.5"
                                     VerticalAlignment="Center">
                                 <TextBlock Text="{Binding OverallPercentText}"
                                            FontSize="20"
@@ -402,19 +452,19 @@
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
 
-                            <Border Style="{StaticResource MetricCardStyle}" Padding="9,6">
+                            <Border Style="{StaticResource MetricCardStyle}" Padding="4.5,3">
                                 <StackPanel>
                                     <TextBlock Text="SPEED" Style="{StaticResource EyebrowTextStyle}" />
                                     <TextBlock Text="{Binding SpeedText}" FontSize="14" FontWeight="SemiBold" Margin="0,3,0,0" />
                                 </StackPanel>
                             </Border>
-                            <Border Grid.Column="2" Style="{StaticResource MetricCardStyle}" Padding="9,6">
+                            <Border Grid.Column="2" Style="{StaticResource MetricCardStyle}" Padding="4.5,3">
                                 <StackPanel>
                                     <TextBlock Text="TIME LEFT" Style="{StaticResource EyebrowTextStyle}" />
                                     <TextBlock Text="{Binding EtaText}" FontSize="14" FontWeight="SemiBold" Margin="0,3,0,0" />
                                 </StackPanel>
                             </Border>
-                            <Border Grid.Column="4" Style="{StaticResource MetricCardStyle}" Padding="9,6">
+                            <Border Grid.Column="4" Style="{StaticResource MetricCardStyle}" Padding="4.5,3">
                                 <StackPanel>
                                     <TextBlock Text="FILES" Style="{StaticResource EyebrowTextStyle}" />
                                     <TextBlock Text="{Binding FilesText}" FontSize="14" FontWeight="SemiBold" Margin="0,3,0,0" />
@@ -424,54 +474,7 @@
                     </StackPanel>
                 </Border>
 
-                <Border Grid.Row="2" Style="{StaticResource CardStyle}" Padding="14">
-                    <StackPanel>
-                        <Grid>
-                            <StackPanel>
-                                <TextBlock Text="Review command before running" Style="{StaticResource SectionTitleStyle}" />
-                            </StackPanel>
-                            <Button Content="Copy command"
-                                    HorizontalAlignment="Right"
-                                    VerticalAlignment="Center"
-                                    Padding="12,6"
-                                    Command="{Binding CopyCommandCommand}" />
-                        </Grid>
-
-                        <TextBox Text="{Binding CommandPreview, Mode=OneWay}"
-                                 IsReadOnly="True"
-                                 FontFamily="Cascadia Mono, Consolas"
-                                 FontSize="11.5"
-                                 TextWrapping="Wrap"
-                                 MinHeight="44"
-                                 MaxHeight="60"
-                                 VerticalScrollBarVisibility="Auto"
-                                 Margin="0,6,0,0" />
-
-                        <Border Background="{DynamicResource DangerSoftBrush}"
-                                BorderBrush="{DynamicResource DangerBrush}"
-                                BorderThickness="1"
-                                CornerRadius="8"
-                                Padding="8,4"
-                                Margin="0,5,0,0">
-                            <Border.Style>
-                                <Style TargetType="Border">
-                                    <Setter Property="Visibility" Value="Visible" />
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding ValidationText}" Value="">
-                                            <Setter Property="Visibility" Value="Collapsed" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Border.Style>
-                            <TextBlock Text="{Binding ValidationText}"
-                                       Foreground="{DynamicResource DangerBrush}"
-                                       TextWrapping="Wrap"
-                                       FontSize="11.5" />
-                        </Border>
-                    </StackPanel>
-                </Border>
-
-                <Border Grid.Row="4" Style="{StaticResource CardStyle}" Padding="0">
+                <Border Grid.Row="2" Style="{StaticResource CardStyle}" Padding="0">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
@@ -489,14 +492,14 @@
                                         HorizontalAlignment="Right"
                                         VerticalAlignment="Center">
                                 <Button Content="Copy"
-                                        Padding="10,5"
+                                        Padding="5,2.5"
                                         Command="{Binding CopyLogCommand}" />
                                 <Button Content="Open"
-                                        Padding="10,5"
+                                        Padding="5,2.5"
                                         Margin="7,0,0,0"
                                         Command="{Binding OpenLogCommand}" />
                                 <Button Content="Folder"
-                                        Padding="10,5"
+                                        Padding="5,2.5"
                                         Margin="7,0,0,0"
                                         Command="{Binding OpenLogsFolderCommand}" />
                             </StackPanel>
@@ -506,7 +509,7 @@
                                 Background="{DynamicResource SurfaceAlternativeBrush}"
                                 BorderBrush="{DynamicResource BorderBrush}"
                                 BorderThickness="0,1"
-                                Padding="2">
+                                Padding="1">
                             <TextBox Text="{Binding LogText, Mode=OneWay}"
                                      IsReadOnly="True"
                                      AcceptsReturn="True"
@@ -516,7 +519,7 @@
                                      BorderThickness="0"
                                      VerticalScrollBarVisibility="Auto"
                                      HorizontalScrollBarVisibility="Auto"
-                                     Padding="12,9" />
+                                     Padding="6,4.5" />
                         </Border>
                     </Grid>
                 </Border>
@@ -526,7 +529,7 @@
         <!-- Raised action bar -->
         <Border Grid.Row="2"
                 Style="{StaticResource CardStyle}"
-                Padding="18,12"
+                Padding="9,6"
                 Margin="20,0,20,14">
             <Grid>
                 <Grid.ColumnDefinitions>

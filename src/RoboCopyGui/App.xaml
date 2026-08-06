@@ -81,7 +81,7 @@
             <Setter Property="BorderBrush" Value="{DynamicResource HighlightBrush}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="CornerRadius" Value="16" />
-            <Setter Property="Padding" Value="20" />
+            <Setter Property="Padding" Value="10" />
             <Setter Property="Effect" Value="{StaticResource RaisedShadowEffect}" />
         </Style>
 
@@ -90,7 +90,7 @@
             <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="CornerRadius" Value="12" />
-            <Setter Property="Padding" Value="12" />
+            <Setter Property="Padding" Value="6" />
         </Style>
 
         <Style x:Key="MetricCardStyle" TargetType="Border">
@@ -98,7 +98,7 @@
             <Setter Property="BorderBrush" Value="{DynamicResource HighlightBrush}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="CornerRadius" Value="12" />
-            <Setter Property="Padding" Value="12,10" />
+            <Setter Property="Padding" Value="6,5" />
             <Setter Property="Effect" Value="{StaticResource PressedShadowEffect}" />
         </Style>
 
@@ -107,7 +107,7 @@
             <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
             <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="Padding" Value="11,8" />
+            <Setter Property="Padding" Value="5.5,4" />
             <Setter Property="VerticalContentAlignment" Value="Center" />
             <Setter Property="CaretBrush" Value="{DynamicResource AccentBrush}" />
             <Setter Property="SelectionBrush" Value="{DynamicResource AccentSoftBrush}" />
@@ -144,7 +144,7 @@
             <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
             <Setter Property="BorderBrush" Value="{DynamicResource HighlightBrush}" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="Padding" Value="16,9" />
+            <Setter Property="Padding" Value="8,4.5" />
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="FontWeight" Value="SemiBold" />
             <Setter Property="Template">
@@ -207,7 +207,7 @@
             <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
             <Setter Property="BorderBrush" Value="{DynamicResource HighlightBrush}" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="Padding" Value="12,10" />
+            <Setter Property="Padding" Value="6,5" />
             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="Template">
@@ -332,7 +332,7 @@
             <Setter Property="Background" Value="#3A3731" />
             <Setter Property="Foreground" Value="White" />
             <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="Padding" Value="10,6" />
+            <Setter Property="Padding" Value="5,3" />
             <Setter Property="FontSize" Value="11" />
         </Style>
     </Application.Resources>
