@@ -187,7 +187,7 @@
                             <TextBlock Text="{Binding OverallLabel}" FontWeight="SemiBold" />
                             <TextBlock Grid.Column="1" Text="{Binding TransferredText}" Foreground="{DynamicResource MutedTextBrush}" />
                         </Grid>
-                        <ProgressBar Value="{Binding OverallPercent}" IsIndeterminate="{Binding IsScanning}" />
+                        <ProgressBar Value="{Binding OverallPercent, Mode=OneWay}" IsIndeterminate="{Binding IsScanning}" />
 
                         <Grid Margin="0,15,0,5">
                             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
@@ -195,7 +195,7 @@
                             <TextBlock Grid.Column="1" Text="{Binding CurrentFilePercentText}" Foreground="{DynamicResource MutedTextBrush}" />
                         </Grid>
                         <TextBlock Text="{Binding CurrentFile}" TextTrimming="CharacterEllipsis" ToolTip="{Binding CurrentFile}" Foreground="{DynamicResource MutedTextBrush}" Margin="0,0,0,6" />
-                        <ProgressBar Value="{Binding CurrentFilePercent}" />
+                        <ProgressBar Value="{Binding CurrentFilePercent, Mode=OneWay}" />
 
                         <Grid Margin="0,18,0,0">
                             <Grid.ColumnDefinitions>
@@ -223,7 +223,7 @@
                             <TextBlock Text="Command preview" FontSize="16" FontWeight="SemiBold" />
                             <Button Content="Copy" HorizontalAlignment="Right" Padding="11,5" Command="{Binding CopyCommandCommand}" />
                         </Grid>
-                        <TextBox Text="{Binding CommandPreview}" IsReadOnly="True" FontFamily="Cascadia Mono, Consolas" FontSize="11.5" TextWrapping="Wrap" MinHeight="58" MaxHeight="95" VerticalScrollBarVisibility="Auto" Margin="0,11,0,0" />
+                        <TextBox Text="{Binding CommandPreview, Mode=OneWay}" IsReadOnly="True" FontFamily="Cascadia Mono, Consolas" FontSize="11.5" TextWrapping="Wrap" MinHeight="58" MaxHeight="95" VerticalScrollBarVisibility="Auto" Margin="0,11,0,0" />
                         <TextBlock Text="{Binding ValidationText}" Foreground="{DynamicResource DangerBrush}" TextWrapping="Wrap" FontSize="11.5" Margin="2,8,2,0">
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock">
