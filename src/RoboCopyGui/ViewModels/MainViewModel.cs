@@ -55,6 +55,7 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
 
         BrowseSourceCommand = new RelayCommand(BrowseSource, () => !IsBusy);
         BrowseDestinationCommand = new RelayCommand(BrowseDestination, () => !IsBusy);
+        ClearPathsCommand = new RelayCommand(ClearPaths, () => !IsBusy);
         SwapCommand = new RelayCommand(SwapPaths, () => !IsBusy);
         StartCommand = new AsyncRelayCommand(StartAsync, () => Stage is CopyJobStage.Idle or CopyJobStage.Completed or CopyJobStage.Failed or CopyJobStage.Canceled, HandleCommandError);
         PauseCommand = new AsyncRelayCommand(_runner.PauseAsync, () => Stage == CopyJobStage.Running, HandleCommandError);
@@ -76,6 +77,7 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
 
     public RelayCommand BrowseSourceCommand { get; }
     public RelayCommand BrowseDestinationCommand { get; }
+    public RelayCommand ClearPathsCommand { get; }
     public RelayCommand SwapCommand { get; }
     public AsyncRelayCommand StartCommand { get; }
     public AsyncRelayCommand PauseCommand { get; }
@@ -225,6 +227,8 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
         if (selected is not null) DestinationPath = selected;
     }
 
+    private void ClearPaths() => (SourcePath, DestinationPath) = (string.Empty, string.Empty);
+
     private void SwapPaths() => (SourcePath, DestinationPath) = (DestinationPath, SourcePath);
 
     private void OnOptionChanged(OptionItemViewModel changed)
@@ -330,6 +334,7 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
     {
         BrowseSourceCommand.NotifyCanExecuteChanged();
         BrowseDestinationCommand.NotifyCanExecuteChanged();
+        ClearPathsCommand.NotifyCanExecuteChanged();
         SwapCommand.NotifyCanExecuteChanged();
         StartCommand.NotifyCanExecuteChanged();
         PauseCommand.NotifyCanExecuteChanged();

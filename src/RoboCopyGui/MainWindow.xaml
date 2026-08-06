@@ -144,12 +144,33 @@
                             <RowDefinition Height="*" />
                         </Grid.RowDefinitions>
 
-                        <StackPanel Margin="10,7,10,6">
-                            <TextBlock Text="TRANSFER LOCATIONS" Style="{StaticResource EyebrowTextStyle}" />
-                            <TextBlock Text="Choose what to copy and where it should go"
-                                       Style="{StaticResource MutedTextStyle}"
-                                       Margin="0,1,0,0" />
-                        </StackPanel>
+                        <Grid Margin="10,7,10,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel>
+                                <TextBlock Text="TRANSFER LOCATIONS" Style="{StaticResource EyebrowTextStyle}" />
+                                <TextBlock Text="Choose what to copy and where it should go"
+                                           Style="{StaticResource MutedTextStyle}"
+                                           TextWrapping="Wrap"
+                                           Margin="0,1,0,0" />
+                            </StackPanel>
+
+                            <Button Grid.Column="1"
+                                    Content="Clear"
+                                    Command="{Binding ClearPathsCommand}"
+                                    Width="58"
+                                    Height="28"
+                                    Padding="5,2"
+                                    Margin="8,0,0,0"
+                                    VerticalAlignment="Center"
+                                    Background="{DynamicResource AccentSoftBrush}"
+                                    BorderBrush="{DynamicResource AccentBrush}"
+                                    ToolTip="Clear source and destination"
+                                    AutomationProperties.Name="Clear transfer locations" />
+                        </Grid>
 
                         <Grid Grid.Row="1" Margin="7,0,7,8">
                             <Grid.ColumnDefinitions>
@@ -218,11 +239,13 @@
                                     Grid.RowSpan="4"
                                     Command="{Binding SwapCommand}"
                                     Margin="0"
-                                    Padding="3,2">
-                                <TextBlock Text="Swap"
+                                    Padding="3,2"
+                                    ToolTip="Swap source and destination"
+                                    AutomationProperties.Name="Swap source and destination">
+                                <TextBlock Text="&#x2191;  &#x2193;"
                                            TextAlignment="Center"
-                                           FontSize="16"
-                                           FontWeight="Bold" />
+                                           FontSize="20"
+                                           FontWeight="Normal" />
                             </Button>
                         </Grid>
                     </Grid>
