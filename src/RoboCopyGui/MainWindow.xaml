@@ -43,7 +43,6 @@
                         </Grid.ColumnDefinitions>
                         <Border Width="42"
                                 Height="42"
-                                CornerRadius="11"
                                 Background="{DynamicResource AccentBrush}"
                                 VerticalAlignment="Center"
                                 Effect="{StaticResource AccentGlowEffect}">
@@ -253,7 +252,6 @@
                                             <Border Background="{DynamicResource AccentSoftBrush}"
                                                     BorderBrush="{DynamicResource AccentBrush}"
                                                     BorderThickness="0,0,0,1"
-                                                    CornerRadius="8"
                                                     Padding="5.5,3.5"
                                                     Margin="14,8,14,4">
                                                 <TextBlock Text="{Binding Name}"
@@ -301,7 +299,7 @@
                                                     <ColumnDefinition Width="*" />
                                                 </Grid.ColumnDefinitions>
 
-                                                <Border Width="20" Height="20" CornerRadius="5" VerticalAlignment="Top">
+                                                <Border Width="20" Height="20" VerticalAlignment="Top">
                                                     <Border.Style>
                                                         <Style TargetType="Border">
                                                             <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
@@ -338,7 +336,6 @@
                                                     <StackPanel Orientation="Horizontal">
                                                         <TextBlock Text="{Binding Label}" FontWeight="SemiBold" />
                                                         <Border Background="{DynamicResource SurfaceAlternativeBrush}"
-                                                                CornerRadius="6"
                                                                 Padding="3,1"
                                                                 Margin="8,-1,0,0">
                                                             <TextBlock Text="{Binding Flag}"
@@ -439,7 +436,6 @@
                                 Background="{DynamicResource DangerSoftBrush}"
                                 BorderBrush="{DynamicResource DangerBrush}"
                                 BorderThickness="1"
-                                CornerRadius="8"
                                 Padding="4,2.5"
                                 Margin="8,7,8,8">
                             <Border.Style>
@@ -486,7 +482,6 @@
                             </StackPanel>
                             <Border Grid.Column="1"
                                     Background="{DynamicResource AccentSoftBrush}"
-                                    CornerRadius="12"
                                     Padding="5,2.5"
                                     VerticalAlignment="Center">
                                 <TextBlock Text="{Binding OverallPercentText}"
