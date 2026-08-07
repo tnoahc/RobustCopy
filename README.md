@@ -16,6 +16,7 @@ The interface design references are kept in [`docs/mockups`](docs/mockups/README
 - Pause and resume the live Robocopy process, or stop it permanently.
 - Require confirmation for Mirror, Purge, and Move modes.
 - Save UTF-8 run transcripts under `%LocalAppData%\RobustCopy\Logs`.
+- Preserve logs from earlier installations by copying them into the RobustCopy log directory on first use.
 - Run Robocopy without `cmd.exe`; paths and switches are passed through `ProcessStartInfo.ArgumentList`.
 
 Robocopy console output is decoded using the active Windows OEM code page and then written as UTF-8. The GUI reserves `/UNICODE` because the installed Robocopy build emits a mixed BOM/console stream for that switch when stdout is redirected, which cannot be parsed reliably for live progress.
@@ -41,8 +42,8 @@ The Start, Pause, Resume, and Stop controls remain visible in the header, alongs
 Open PowerShell in this repository:
 
 ```powershell
-dotnet build RoboCopyGui.slnx --configuration Release
-dotnet run --project src\RoboCopyGui\RoboCopyGui.csproj
+dotnet build RobustCopy.slnx --configuration Release
+dotnet run --project src\RobustCopy\RobustCopy.csproj
 ```
 
 If an installer has just added the SDK and the current terminal has not refreshed its `PATH`, start a new PowerShell window or invoke `C:\Program Files\dotnet\dotnet.exe` directly.
@@ -52,13 +53,13 @@ If an installer has just added the SDK and the current terminal has not refreshe
 The repository uses a dependency-free executable test project so it can be verified without downloading a test framework. It covers command construction, validation, parsing, exit codes, and safe Robocopy integration in temporary folders, including Pause/Resume and Stop/Restart.
 
 ```powershell
-dotnet run --project tests\RoboCopyGui.Tests\RoboCopyGui.Tests.csproj --configuration Release
+dotnet run --project tests\RobustCopy.Tests\RobustCopy.Tests.csproj --configuration Release
 ```
 
 ## Publish a portable executable
 
 ```powershell
-dotnet publish src\RoboCopyGui\RoboCopyGui.csproj `
+dotnet publish src\RobustCopy\RobustCopy.csproj `
   --configuration Release `
   --runtime win-x64 `
   --self-contained true `

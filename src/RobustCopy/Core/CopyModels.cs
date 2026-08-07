@@ -1,4 +1,4 @@
-namespace RoboCopyGui.Core;
+namespace RobustCopy.Core;
 
 public enum CopyJobStage
 {

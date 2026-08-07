@@ -2,11 +2,11 @@ using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
-using RoboCopyGui.Core;
-using RoboCopyGui.Services;
-using RoboCopyGui.ViewModels;
+using RobustCopy.Core;
+using RobustCopy.Services;
+using RobustCopy.ViewModels;
 
-namespace RoboCopyGui;
+namespace RobustCopy;
 
 public partial class MainWindow : Window
 {

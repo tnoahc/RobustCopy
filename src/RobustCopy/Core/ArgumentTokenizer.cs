@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace RoboCopyGui.Core;
+namespace RobustCopy.Core;
 
 public static class ArgumentTokenizer
 {

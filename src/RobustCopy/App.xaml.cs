@@ -1,6 +1,6 @@
 using System.Windows;
 
-namespace RoboCopyGui;
+namespace RobustCopy;
 
 public partial class App : Application
 {

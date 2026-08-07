@@ -1,9 +1,9 @@
 using System.Globalization;
 using System.IO;
 using System.Text.RegularExpressions;
-using RoboCopyGui.Core;
+using RobustCopy.Core;
 
-namespace RoboCopyGui.Services;
+namespace RobustCopy.Services;
 
 public sealed record RobocopyOutputRecord(string Path, long Bytes, double? Percent, bool IsExtra, bool IsDirectory)
 {

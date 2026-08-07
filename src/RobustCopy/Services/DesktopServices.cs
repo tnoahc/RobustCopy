@@ -3,7 +3,7 @@ using System.IO;
 using System.Windows;
 using Microsoft.Win32;
 
-namespace RoboCopyGui.Services;
+namespace RobustCopy.Services;
 
 public interface IFolderPicker
 {

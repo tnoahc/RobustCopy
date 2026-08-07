@@ -1,6 +1,6 @@
-using RoboCopyGui.Core;
+using RobustCopy.Core;
 
-namespace RoboCopyGui.ViewModels;
+namespace RobustCopy.ViewModels;
 
 public sealed class OptionItemViewModel : ObservableObject
 {

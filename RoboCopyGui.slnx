@@ -1,8 +1,0 @@
-<Solution>
-  <Folder Name="/src/">
-    <Project Path="src/RoboCopyGui/RoboCopyGui.csproj" />
-  </Folder>
-  <Folder Name="/tests/">
-    <Project Path="tests/RoboCopyGui.Tests/RoboCopyGui.Tests.csproj" />
-  </Folder>
-</Solution>

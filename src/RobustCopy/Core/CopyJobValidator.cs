@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.IO;
 
-namespace RoboCopyGui.Core;
+namespace RobustCopy.Core;
 
 public static class CopyJobValidator
 {

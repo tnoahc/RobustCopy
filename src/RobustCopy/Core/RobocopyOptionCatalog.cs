@@ -1,6 +1,6 @@
 using System.Collections.ObjectModel;
 
-namespace RoboCopyGui.Core;
+namespace RobustCopy.Core;
 
 public enum OptionValueKind
 {

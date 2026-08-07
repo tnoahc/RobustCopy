@@ -2,9 +2,9 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Text;
-using RoboCopyGui.Core;
+using RobustCopy.Core;
 
-namespace RoboCopyGui.Services;
+namespace RobustCopy.Services;
 
 public sealed class RobocopyRunner : IRobocopyRunner
 {
@@ -22,7 +22,7 @@ public sealed class RobocopyRunner : IRobocopyRunner
 
     public RobocopyRunner(string? logDirectory = null)
     {
-        _logDirectory = logDirectory ?? AppIdentity.LogDirectory;
+        _logDirectory = logDirectory ?? AppIdentity.EnsureLogDirectory();
     }
 
     public event EventHandler<CopyJobProgress>? ProgressChanged;

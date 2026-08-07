@@ -2,10 +2,10 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Text;
 using System.Windows;
-using RoboCopyGui.Core;
-using RoboCopyGui.Services;
+using RobustCopy.Core;
+using RobustCopy.Services;
 
-namespace RoboCopyGui.ViewModels;
+namespace RobustCopy.ViewModels;
 
 public sealed class MainViewModel : ObservableObject, IAsyncDisposable
 {
@@ -342,8 +342,7 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
 
     private void OpenLogsFolder()
     {
-        var directory = AppIdentity.LogDirectory;
-        Directory.CreateDirectory(directory);
+        var directory = AppIdentity.EnsureLogDirectory();
         _launcher.OpenPath(directory);
     }
 

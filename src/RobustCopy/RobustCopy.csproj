@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -9,7 +9,7 @@
     <AssemblyName>RobustCopy</AssemblyName>
     <Product>RobustCopy</Product>
     <AssemblyTitle>RobustCopy</AssemblyTitle>
-    <RootNamespace>RoboCopyGui</RootNamespace>
+    <RootNamespace>RobustCopy</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <PublishSingleFile>true</PublishSingleFile>

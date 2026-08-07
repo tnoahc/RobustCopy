@@ -1,6 +1,6 @@
 using System.Windows.Input;
 
-namespace RoboCopyGui.ViewModels;
+namespace RobustCopy.ViewModels;
 
 public sealed class RelayCommand(Action execute, Func<bool>? canExecute = null) : ICommand
 {

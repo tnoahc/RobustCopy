@@ -1,7 +1,7 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
-namespace RoboCopyGui.ViewModels;
+namespace RobustCopy.ViewModels;
 
 public abstract class ObservableObject : INotifyPropertyChanged
 {

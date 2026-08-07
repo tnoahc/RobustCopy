@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Microsoft.Win32.SafeHandles;
 
-namespace RoboCopyGui.Services;
+namespace RobustCopy.Services;
 
 internal sealed class ProcessJob : IDisposable
 {

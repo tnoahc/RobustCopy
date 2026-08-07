@@ -1,10 +1,11 @@
-using RoboCopyGui.Core;
-using RoboCopyGui.Services;
-using RoboCopyGui.ViewModels;
+using RobustCopy.Core;
+using RobustCopy.Services;
+using RobustCopy.ViewModels;
 
 var tests = new (string Name, Func<Task> Run)[]
 {
     ("Application identity uses RobustCopy", TestAppIdentityAsync),
+    ("Legacy application logs migrate to RobustCopy", TestLegacyLogMigrationAsync),
     ("Argument tokenizer preserves quoted values", TestTokenizerAsync),
     ("Command builder keeps paths as individual arguments", TestCommandBuilderAsync),
     ("Validator blocks overlapping paths", TestOverlappingPathsAsync),
@@ -45,11 +46,30 @@ static Task TestAppIdentityAsync()
     Equal("RobustCopy", AppIdentity.DisplayName);
     Equal("RobustCopy", AppIdentity.LocalDataFolderName);
     Equal("RobustCopy", typeof(AppIdentity).Assembly.GetName().Name);
+    Equal("RobustCopy.Core", typeof(AppIdentity).Namespace);
+    Equal("RobustCopy.Tests", System.Reflection.Assembly.GetEntryAssembly()?.GetName().Name);
     True(
         AppIdentity.LogDirectory.EndsWith(Path.Combine("RobustCopy", "Logs"), StringComparison.OrdinalIgnoreCase),
         "Expected the log directory to use the RobustCopy product name.");
     return Task.CompletedTask;
 }
+
+static Task TestLegacyLogMigrationAsync() => WithFixtureAsync(fixture =>
+{
+    var legacyDirectory = Path.Combine(
+        fixture.Root,
+        AppIdentity.LegacyLocalDataFolderName,
+        "Logs");
+    Directory.CreateDirectory(legacyDirectory);
+    var legacyLog = Path.Combine(legacyDirectory, "robocopy-legacy.log");
+    File.WriteAllText(legacyLog, "legacy transcript");
+
+    var migratedDirectory = AppIdentity.EnsureLogDirectory(fixture.Root);
+    Equal(Path.Combine(fixture.Root, AppIdentity.LocalDataFolderName, "Logs"), migratedDirectory);
+    Equal("legacy transcript", File.ReadAllText(Path.Combine(migratedDirectory, "robocopy-legacy.log")));
+    True(File.Exists(legacyLog), "Legacy logs should be copied without deleting the originals.");
+    return Task.CompletedTask;
+});
 
 static Task TestTokenizerAsync()
 {

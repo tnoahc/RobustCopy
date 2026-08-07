@@ -1,4 +1,4 @@
-namespace RoboCopyGui.Core;
+namespace RobustCopy.Core;
 
 public static class ExitCodeInterpreter
 {
