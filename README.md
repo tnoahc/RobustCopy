@@ -2,6 +2,8 @@
 
 A native Windows interface for `robocopy.exe`, built with .NET 10 WPF. It keeps Robocopy's reliability while adding safe option selection, descriptive help, pre-scan totals, live progress, Pause/Resume/Stop controls, command preview, and persistent logs.
 
+The interface design references are kept in [`docs/mockups`](docs/mockups/README.md).
+
 ## Features
 
 - Browse or type local, mapped-drive, and UNC source/destination folders.
