@@ -10,17 +10,17 @@ The interface design references are kept in [`docs/mockups`](docs/mockups/README
 
 ## Download
 
-The current release is **RobustCopy 1.0.0**, published by **Kaleb Creative Studio** for Windows 10 and Windows 11 x64.
+The current release is **RobustCopy 1.0.1**, published by **Kaleb Creative Studio** for Windows 10 and Windows 11 x64.
 
-- [Download RobustCopy.exe](https://gitlab.tarinyebwa.com/api/v4/projects/tnoahc%2Frobustcopy/packages/generic/RobustCopy/v1%2E0%2E0/RobustCopy%2Eexe)
-- [Download the smaller ZIP package](https://gitlab.tarinyebwa.com/api/v4/projects/tnoahc%2Frobustcopy/packages/generic/RobustCopy/v1%2E0%2E0/RobustCopy-1%2E0%2E0-windows-x64%2Ezip)
-- [View the GitLab v1.0.0 release](https://gitlab.tarinyebwa.com/tnoahc/robustcopy/-/releases/v1.0.0)
+- [Download RobustCopy.exe](https://gitlab.tarinyebwa.com/api/v4/projects/tnoahc%2Frobustcopy/packages/generic/RobustCopy/v1%2E0%2E1/RobustCopy%2Eexe)
+- [Download the smaller ZIP package](https://gitlab.tarinyebwa.com/api/v4/projects/tnoahc%2Frobustcopy/packages/generic/RobustCopy/v1%2E0%2E1/RobustCopy-1%2E0%2E1-windows-x64%2Ezip)
+- [View the GitLab v1.0.1 release](https://gitlab.tarinyebwa.com/tnoahc/robustcopy/-/releases/v1.0.1)
 - [Browse the GitLab repository](https://gitlab.tarinyebwa.com/tnoahc/robustcopy)
 
-The 61.8 MB executable is self-contained; no separate .NET installation is required. Its SHA-256 checksum is:
+The 62.1 MB executable is self-contained; no separate .NET installation is required. Its SHA-256 checksum is:
 
 ```text
-264EB878ED47A837DB31B0D01007D392300BF5A733C5F15EA9443284B4CF6F15  RobustCopy.exe
+2EDDA6466782A6576782ABA3ACB70147188FF5094CCF4D91795AC526427F208B  RobustCopy.exe
 ```
 
 ## Features

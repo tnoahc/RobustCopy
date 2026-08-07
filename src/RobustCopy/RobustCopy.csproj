@@ -9,7 +9,7 @@
     <AssemblyName>RobustCopy</AssemblyName>
     <Product>RobustCopy</Product>
     <AssemblyTitle>RobustCopy</AssemblyTitle>
-    <Version>1.0.0</Version>
+    <Version>1.0.1</Version>
     <Company>Kaleb Creative Studio</Company>
     <Authors>Kaleb Creative Studio</Authors>
     <Description>A focused Windows desktop interface for reliable Robocopy file transfers.</Description>
