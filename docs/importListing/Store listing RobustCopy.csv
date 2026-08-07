@@ -1,0 +1,71 @@
+Field,Type,English
+ProductName,Text,RobustCopy
+Description,Text,"RobustCopy is a focused Windows desktop interface for Microsoft Robocopy. It makes reliable file and folder transfers easier to configure, preview, monitor, and control without requiring users to build complex command lines manually. Choose source and destination folders, select categorized transfer options, and review the generated Robocopy command before starting. RobustCopy performs a list-only pre-scan to estimate planned files, bytes, and destination deletions. Destructive modes such as Mirror, Purge, and Move require explicit confirmation. During a transfer, RobustCopy displays live progress, current-file details, transfer speed, estimated time remaining, file counts, and Robocopy output. Active jobs can be paused, resumed, or stopped. Run transcripts are stored locally as UTF-8 logs under the Windows local application data folder. RobustCopy does not require an account and does not include telemetry or cloud synchronization. RobustCopy is an independent interface for the Microsoft Windows Robocopy utility."
+WhatsNew,Text,
+ProductFeatures1,Text,Visual configuration for commonly used Robocopy options
+ProductFeatures2,Text,List-only pre-scan before each transfer
+ProductFeatures3,Text,Command preview before starting a job
+ProductFeatures4,Text,"Live progress, transfer speed, ETA, and file counts"
+ProductFeatures5,Text,"Pause, resume, and stop controls"
+ProductFeatures6,Text,"Explicit confirmation for Mirror, Purge, and Move modes"
+ProductFeatures7,Text,Local UTF-8 transfer transcripts
+ProductFeatures8,Text,"Support for local, mapped-drive, and UNC paths"
+ProductFeatures9,Text,Self-contained Windows x64 application
+ProductFeatures10,Text,
+ProductFeatures11,Text,
+ProductFeatures12,Text,
+ProductFeatures13,Text,
+ProductFeatures14,Text,
+ProductFeatures15,Text,
+ProductFeatures16,Text,
+ProductFeatures17,Text,
+ProductFeatures18,Text,
+ProductFeatures19,Text,
+ProductFeatures20,Text,
+ShortDescription,Text,"A focused Windows interface for reliable Robocopy file transfers, with safe presets, command previews, live progress, and local UTF-8 logs."
+SearchTerms1,Text,robocopy
+SearchTerms2,Text,file copy
+SearchTerms3,Text,file transfer
+SearchTerms4,Text,folder sync
+SearchTerms5,Text,backup
+SearchTerms6,Text,mirror
+SearchTerms7,Text,Windows utility
+Applicable license terms,Text,"RobustCopy is proprietary software provided by Kaleb Creative Studio. You may install and use the application for personal or organizational purposes. You may not redistribute, sublicense, sell, modify, or reverse engineer the application except where applicable law expressly permits. The software is provided ""as is,"" without warranties of any kind to the maximum extent permitted by law. Kaleb Creative Studio is not liable for data loss or other damages resulting from use of the application. Users are responsible for reviewing transfer commands and maintaining appropriate backups."
+Copyright,Text,"(c) 2026 Kaleb Creative Studio. RobustCopy is an independent interface for Microsoft Windows Robocopy. Microsoft and Windows are trademarks of Microsoft Corporation."
+DevelopedBy,Text,Kaleb Creative Studio
+RequirementsMinimum1,Text,Windows 10 or Windows 11
+RequirementsMinimum2,Text,64-bit x64 processor
+RequirementsMinimum3,Text,Access to the selected source and destination folders
+RequirementsMinimum4,Text,Additional Windows privileges may be required for backup modes
+RequirementsMinimum5,Text,
+RequirementsMinimum6,Text,
+RequirementsMinimum7,Text,
+RequirementsMinimum8,Text,
+RequirementsMinimum9,Text,
+RequirementsMinimum10,Text,
+RequirementsMinimum11,Text,
+RequirementsRecommended1,Text,
+RequirementsRecommended2,Text,
+RequirementsRecommended3,Text,
+RequirementsRecommended4,Text,
+RequirementsRecommended5,Text,
+RequirementsRecommended6,Text,
+RequirementsRecommended7,Text,
+RequirementsRecommended8,Text,
+RequirementsRecommended9,Text,
+RequirementsRecommended10,Text,
+RequirementsRecommended11,Text,
+StoreLogos1,Provide the file name only if it is in the same folder. Provide relative path to image starting with the subfolder name otherwise,logo_1x1.png
+StoreLogos2,Provide the file name only if it is in the same folder. Provide relative path to image starting with the subfolder name otherwise,
+Screenshots1,Provide the file name only if it is in the same folder. Provide relative path to image starting with the subfolder name otherwise,screenshot1.png
+Screenshots2,Provide the file name only if it is in the same folder. Provide relative path to image starting with the subfolder name otherwise,
+Screenshots3,Provide the file name only if it is in the same folder. Provide relative path to image starting with the subfolder name otherwise,
+Screenshots4,Provide the file name only if it is in the same folder. Provide relative path to image starting with the subfolder name otherwise,
+Screenshots5,Provide the file name only if it is in the same folder. Provide relative path to image starting with the subfolder name otherwise,
+Screenshots6,Provide the file name only if it is in the same folder. Provide relative path to image starting with the subfolder name otherwise,
+Screenshots7,Provide the file name only if it is in the same folder. Provide relative path to image starting with the subfolder name otherwise,
+Screenshots8,Provide the file name only if it is in the same folder. Provide relative path to image starting with the subfolder name otherwise,
+Screenshots9,Provide the file name only if it is in the same folder. Provide relative path to image starting with the subfolder name otherwise,
+Screenshots10,Provide the file name only if it is in the same folder. Provide relative path to image starting with the subfolder name otherwise,
+HeroArts,Text,
+Trailers,Text,
