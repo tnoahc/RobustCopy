@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
+using RoboCopyGui.Core;
 using RoboCopyGui.Services;
 using RoboCopyGui.ViewModels;
 
@@ -51,7 +52,7 @@ public partial class MainWindow : Window
         }
 
         var result = MessageBox.Show(
-            "A scan or copy is still active. Stop it and close RoboCopy GUI?",
+            $"A scan or copy is still active. Stop it and close {AppIdentity.DisplayName}?",
             "Copy in progress",
             MessageBoxButton.YesNo,
             MessageBoxImage.Warning,

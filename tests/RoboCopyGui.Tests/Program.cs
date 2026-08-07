@@ -4,6 +4,7 @@ using RoboCopyGui.ViewModels;
 
 var tests = new (string Name, Func<Task> Run)[]
 {
+    ("Application identity uses RobustCopy", TestAppIdentityAsync),
     ("Argument tokenizer preserves quoted values", TestTokenizerAsync),
     ("Command builder keeps paths as individual arguments", TestCommandBuilderAsync),
     ("Validator blocks overlapping paths", TestOverlappingPathsAsync),
@@ -19,7 +20,7 @@ var tests = new (string Name, Func<Task> Run)[]
 };
 
 var failures = 0;
-Console.WriteLine($"RoboCopy GUI test runner — {tests.Length} tests");
+Console.WriteLine($"RobustCopy test runner — {tests.Length} tests");
 foreach (var test in tests)
 {
     try
@@ -38,6 +39,17 @@ foreach (var test in tests)
 Console.WriteLine();
 Console.WriteLine(failures == 0 ? "All tests passed." : $"{failures} test(s) failed.");
 return failures == 0 ? 0 : 1;
+
+static Task TestAppIdentityAsync()
+{
+    Equal("RobustCopy", AppIdentity.DisplayName);
+    Equal("RobustCopy", AppIdentity.LocalDataFolderName);
+    Equal("RobustCopy", typeof(AppIdentity).Assembly.GetName().Name);
+    True(
+        AppIdentity.LogDirectory.EndsWith(Path.Combine("RobustCopy", "Logs"), StringComparison.OrdinalIgnoreCase),
+        "Expected the log directory to use the RobustCopy product name.");
+    return Task.CompletedTask;
+}
 
 static Task TestTokenizerAsync()
 {
@@ -262,7 +274,7 @@ static async Task CreateSizedFileAsync(string path, long length)
 
 static async Task WithFixtureAsync(Func<TestFixture, Task> action)
 {
-    var root = Path.Combine(Path.GetTempPath(), "RoboCopyGuiTests", Guid.NewGuid().ToString("N"));
+    var root = Path.Combine(Path.GetTempPath(), "RobustCopyTests", Guid.NewGuid().ToString("N"));
     var fixture = new TestFixture(root, Path.Combine(root, "source"), Path.Combine(root, "destination"), Path.Combine(root, "logs"));
     Directory.CreateDirectory(fixture.Source);
     Directory.CreateDirectory(fixture.Destination);

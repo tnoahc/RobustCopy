@@ -219,7 +219,7 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
         {
             Stage = CopyJobStage.Failed;
             StatusText = "The operation failed";
-            _dialogs.ShowError("RoboCopy GUI", exception.Message);
+            _dialogs.ShowError(AppIdentity.DisplayName, exception.Message);
         }
         finally
         {
@@ -342,12 +342,12 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
 
     private void OpenLogsFolder()
     {
-        var directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "RoboCopyGUI", "Logs");
+        var directory = AppIdentity.LogDirectory;
         Directory.CreateDirectory(directory);
         _launcher.OpenPath(directory);
     }
 
-    private void HandleCommandError(Exception exception) => _dialogs.ShowError("RoboCopy GUI", exception.Message);
+    private void HandleCommandError(Exception exception) => _dialogs.ShowError(AppIdentity.DisplayName, exception.Message);
 
     private void RefreshCommands()
     {

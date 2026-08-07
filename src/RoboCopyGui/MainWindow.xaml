@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:core="clr-namespace:RoboCopyGui.Core"
         mc:Ignorable="d"
-        Title="RoboCopy GUI"
+        Title="RobustCopy"
         Width="1200"
         Height="680"
         MinWidth="1000"
@@ -410,7 +410,7 @@
                                 </TextBlock.Effect>
                             </TextBlock>
                         </StackPanel>
-                        <TextBlock Text="ROBOCOPY"
+                        <TextBlock Text="ROBUSTCOPY"
                                    FontFamily="Space Grotesk, Segoe UI Variable Display, Segoe UI"
                                    FontSize="30"
                                    FontWeight="Bold"

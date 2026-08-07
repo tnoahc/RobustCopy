@@ -1,4 +1,4 @@
-# RoboCopy GUI
+# RobustCopy
 
 A native Windows interface for `robocopy.exe`, built with .NET 10 WPF. It keeps Robocopy's reliability while adding safe option selection, descriptive help, pre-scan totals, live progress, Pause/Resume/Stop controls, command preview, and persistent logs.
 
@@ -15,7 +15,7 @@ The interface design references are kept in [`docs/mockups`](docs/mockups/README
 - Show overall/current-file progress, transfer speed, ETA, file counts, and live output.
 - Pause and resume the live Robocopy process, or stop it permanently.
 - Require confirmation for Mirror, Purge, and Move modes.
-- Save UTF-8 run transcripts under `%LocalAppData%\RoboCopyGUI\Logs`.
+- Save UTF-8 run transcripts under `%LocalAppData%\RobustCopy\Logs`.
 - Run Robocopy without `cmd.exe`; paths and switches are passed through `ProcessStartInfo.ArgumentList`.
 
 Robocopy console output is decoded using the active Windows OEM code page and then written as UTF-8. The GUI reserves `/UNICODE` because the installed Robocopy build emits a mixed BOM/console stream for that switch when stdout is redirected, which cannot be parsed reliably for live progress.
@@ -65,7 +65,7 @@ dotnet publish src\RoboCopyGui\RoboCopyGui.csproj `
   --output artifacts\publish
 ```
 
-The main deliverable is `artifacts\publish\RoboCopyGUI.exe`.
+The main deliverable is `artifacts\publish\RobustCopy.exe`.
 
 The `artifacts/` directory contains generated build outputs and visual verification files and is intentionally excluded from version control. Run the publish command whenever the distributable executable needs to be refreshed.
 

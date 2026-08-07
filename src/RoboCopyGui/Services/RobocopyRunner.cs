@@ -22,10 +22,7 @@ public sealed class RobocopyRunner : IRobocopyRunner
 
     public RobocopyRunner(string? logDirectory = null)
     {
-        _logDirectory = logDirectory ?? Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "RoboCopyGUI",
-            "Logs");
+        _logDirectory = logDirectory ?? AppIdentity.LogDirectory;
     }
 
     public event EventHandler<CopyJobProgress>? ProgressChanged;

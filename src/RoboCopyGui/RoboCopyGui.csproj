@@ -6,7 +6,9 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
-    <AssemblyName>RoboCopyGUI</AssemblyName>
+    <AssemblyName>RobustCopy</AssemblyName>
+    <Product>RobustCopy</Product>
+    <AssemblyTitle>RobustCopy</AssemblyTitle>
     <RootNamespace>RoboCopyGui</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
