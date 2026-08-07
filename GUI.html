@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Robocopy — Dark Console Mockup</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #14171A;
+    --bg-raised: #191D21;
+    --panel: #1C2125;
+    --panel-2: #21262B;
+    --border: #2B3238;
+    --border-soft: #23292E;
+    --text: #E8EBED;
+    --text-dim: #9AA3AB;
+    --text-faint: #5B6469;
+    --accent: #35D6A8;
+    --accent-dim: #1E8F6F;
+    --accent-glow: rgba(53,214,168,0.18);
+    --amber: #F0B437;
+    --amber-dim: #8A6A22;
+    --red: #EA5257;
+    --red-dim: #7A3234;
+    --blue: #5B9CE0;
+    --radius: 3px;
+    --font-display: 'Space Grotesk', sans-serif;
+    --font-body: 'Inter', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background: var(--bg);
+    background-image:
+      radial-gradient(circle at 15% 0%, rgba(53,214,168,0.05), transparent 40%),
+      repeating-linear-gradient(0deg, rgba(255,255,255,0.012) 0px, rgba(255,255,255,0.012) 1px, transparent 1px, transparent 3px);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 13px;
+    line-height: 1.5;
+    padding: 28px;
+    min-height: 100vh;
+  }
+
+  .wrap{ max-width: 1440px; margin: 0 auto; }
+
+  /* ===== HEADER ===== */
+  header{
+    display:flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 32px;
+    padding-bottom: 22px;
+    margin-bottom: 22px;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .brand{ display:flex; flex-direction:column; gap:4px; }
+  .eyebrow{
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.16em;
+    color: var(--accent);
+    text-transform: uppercase;
+    display:flex; align-items:center; gap:8px;
+  }
+  .eyebrow::before{
+    content:"";
+    width:6px; height:6px; border-radius:50%;
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+  }
+  h1{
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 30px;
+    letter-spacing: -0.01em;
+    margin: 2px 0 0 0;
+    color: #F4F6F7;
+  }
+  .tagline{ color: var(--text-dim); font-size: 12.5px; margin-top: 2px;}
+
+  .header-right{ display:flex; flex-direction:column; align-items:flex-end; gap:12px; }
+  .notice{
+    text-align:right;
+    max-width: 460px;
+  }
+  .notice .strong{ color: var(--amber); font-weight:600; font-size:12.5px; }
+  .notice .sub{ color: var(--text-faint); font-size: 11.5px; margin-top:2px; }
+
+  .status-pill{
+    display:flex; align-items:center; gap:8px;
+    font-family: var(--font-mono);
+    font-size: 11px; letter-spacing:0.05em;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    padding: 6px 12px;
+    border-radius: 20px;
+    color: var(--text-dim);
+  }
+  .status-pill .dot{ width:7px; height:7px; border-radius:50%; background: var(--text-faint); }
+  .status-pill.idle .dot{ background: var(--text-faint); }
+  .status-pill.running .dot{ background: var(--accent); box-shadow: 0 0 6px var(--accent); animation: pulse 1.4s infinite; }
+  .status-pill.running{ color: var(--accent); border-color: var(--accent-dim); }
+  .status-pill.paused .dot{ background: var(--amber); box-shadow: 0 0 6px var(--amber); }
+  .status-pill.paused{ color: var(--amber); border-color: var(--amber-dim); }
+  .status-pill.stopped .dot{ background: var(--red); }
+  .status-pill.stopped{ color: var(--red); border-color: var(--red-dim); }
+
+  @keyframes pulse{ 0%,100%{opacity:1;} 50%{opacity:0.35;} }
+
+  /* ===== ACTION BAR ===== */
+  .action-bar{
+    display:grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow:hidden;
+    margin-top: 14px;
+    width: 460px;
+    margin-left:auto;
+  }
+  .action-bar button{
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 12.5px;
+    letter-spacing: 0.03em;
+    padding: 12px 0;
+    border: none;
+    cursor: pointer;
+    background: var(--panel);
+    color: var(--text-dim);
+    transition: background 0.15s, color 0.15s;
+  }
+  .action-bar button:disabled{ cursor:not-allowed; opacity: 0.35; }
+  .action-bar button.start{ color:#0B1F1A; background: var(--accent); }
+  .action-bar button.start:hover:not(:disabled){ background:#4FE6BB; }
+  .action-bar button.pause{ color:#241A03; background: var(--amber); }
+  .action-bar button.pause:hover:not(:disabled){ background:#FFC658; }
+  .action-bar button.resume{ background: var(--panel-2); color: var(--text); border-top:2px solid var(--blue); }
+  .action-bar button.resume:hover:not(:disabled){ color:#fff; }
+  .action-bar button.stop{ color:#2B0C0D; background: var(--red); }
+  .action-bar button.stop:hover:not(:disabled){ background:#FF6B6F; }
+
+  /* ===== GRID ===== */
+  .grid{
+    display:grid;
+    grid-template-columns: 1.05fr 1.1fr 1fr;
+    gap: 18px;
+    align-items: start;
+  }
+  .panel{
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow:hidden;
+  }
+  .panel-head{
+    padding: 16px 18px 14px;
+    border-bottom: 1px solid var(--border-soft);
+    display:flex; justify-content:space-between; align-items:flex-start;
+  }
+  .panel-head h2{
+    font-family: var(--font-display);
+    font-size: 13.5px;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--text);
+    margin:0;
+  }
+  .panel-head p{ color: var(--text-faint); font-size:11.5px; margin: 4px 0 0 0; }
+  .panel-body{ padding: 16px 18px 18px; }
+
+  /* ===== FIELDS ===== */
+  .field-block{ margin-bottom: 14px; position:relative; }
+  .field-label-row{
+    display:flex; justify-content:space-between; align-items:center;
+    margin-bottom: 6px;
+  }
+  .field-label{
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    color: var(--text-faint);
+    text-transform: uppercase;
+  }
+  .mini-btn{
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-dim);
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    padding: 3px 8px;
+    border-radius: 3px;
+    cursor:pointer;
+  }
+  .mini-btn:hover{ color: var(--accent); border-color: var(--accent-dim); }
+
+  .path-input{
+    display:flex; align-items:center; gap:8px;
+    background: var(--bg-raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 12px;
+  }
+  .path-input:focus-within{ border-color: var(--accent-dim); box-shadow: 0 0 0 3px var(--accent-glow); }
+  .path-input svg{ flex:none; opacity:0.55; }
+  .path-input input{
+    background:none; border:none; outline:none;
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    width:100%;
+  }
+  .path-input input::placeholder{ color: var(--text-faint); font-style: italic; }
+
+  .swap-row{
+    display:flex; justify-content:center; margin: -3px 0;
+  }
+  .swap-btn{
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    width: 26px; height:26px;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; color: var(--text-dim);
+    z-index:2;
+  }
+  .swap-btn:hover{ color: var(--accent); border-color: var(--accent-dim); transform: rotate(180deg); transition: transform 0.25s; }
+
+  hr.divider{ border:none; border-top:1px solid var(--border-soft); margin: 16px 0; }
+
+  /* ===== COMMAND PREVIEW ===== */
+  .cmd-label{
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom: 8px;
+  }
+  .cmd-label span:first-child{
+    font-family: var(--font-display); font-size:12px; font-weight:600;
+    color: var(--text);
+  }
+  .copy-cmd{
+    font-family: var(--font-mono); font-size: 10px;
+    color: var(--text-faint); cursor:pointer; display:flex; gap:5px; align-items:center;
+  }
+  .copy-cmd:hover{ color: var(--accent); }
+  .cmd-box{
+    background: #0F1214;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 14px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: 1.9;
+    color: #C9CFD3;
+    white-space: pre-wrap;
+    word-break: break-all;
+    min-height: 64px;
+  }
+  .cmd-box .k{ color: var(--accent); }
+  .cmd-box .p{ color: var(--blue); }
+  .cmd-box .c{ color: var(--text-faint); }
+
+  /* ===== STRATEGY CARDS ===== */
+  .group-title{
+    font-family: var(--font-mono);
+    font-size: 10px; letter-spacing:0.12em; text-transform:uppercase;
+    color: var(--text-faint);
+    margin: 18px 0 8px;
+  }
+  .group-title:first-child{ margin-top:0; }
+  .card-grid{ display:grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .opt-card{
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 11px;
+    cursor:pointer;
+    transition: border-color .12s, background .12s;
+    position:relative;
+  }
+  .opt-card:hover{ border-color: var(--accent-dim); }
+  .opt-card .row1{ display:flex; justify-content:space-between; align-items:center; }
+  .opt-card .switch{
+    font-family: var(--font-mono); font-size: 11px; font-weight:600;
+    color: var(--text-dim);
+  }
+  .opt-card .name{ font-size: 11.5px; color: var(--text); margin-top:3px; }
+  .opt-card .desc{ font-size: 10.5px; color: var(--text-faint); margin-top:2px; line-height:1.4; }
+  .opt-card .check{
+    width:14px; height:14px; border-radius:3px;
+    border: 1px solid var(--border);
+    background: var(--bg-raised);
+    flex: none;
+  }
+  .opt-card.active{
+    background: rgba(53,214,168,0.08);
+    border-color: var(--accent);
+  }
+  .opt-card.active .switch{ color: var(--accent); }
+  .opt-card.active .check{
+    background: var(--accent); border-color: var(--accent);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .opt-card.active .check::after{
+    content:"✓"; font-size:10px; color:#0B1F1A; font-weight:700; display:block; text-align:center; line-height:14px;
+  }
+  .opt-card.disabled{ opacity: 0.32; cursor: not-allowed; pointer-events:none; }
+
+  /* ===== OVERVIEW PANEL ===== */
+  .progress-wrap{ margin-bottom: 18px; }
+  .progress-label-row{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:8px; }
+  .progress-label-row .name{ font-family: var(--font-display); font-size:12px; font-weight:600; color: var(--text); }
+  .progress-label-row .pct{ font-family: var(--font-mono); font-size: 15px; color: var(--accent); }
+  .progress-track{
+    height: 8px; background: var(--bg-raised); border-radius: 5px; overflow:hidden;
+    border: 1px solid var(--border);
+  }
+  .progress-fill{
+    height:100%; width:0%;
+    background: linear-gradient(90deg, var(--accent-dim), var(--accent));
+    border-radius: 5px;
+    transition: width 0.4s ease;
+  }
+
+  .current-file{
+    margin-bottom: 18px;
+  }
+  .current-file .cf-label{ font-family: var(--font-mono); font-size:10px; letter-spacing:0.1em; color: var(--text-faint); text-transform:uppercase; margin-bottom:6px;}
+  .current-file .cf-name{
+    font-family: var(--font-mono); font-size: 12px; color: var(--text);
+    background: var(--bg-raised); border:1px solid var(--border);
+    padding: 9px 11px; border-radius: var(--radius);
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+
+  .stat-row{
+    display:grid; grid-template-columns: 1fr 1fr 1fr;
+    gap: 1px; background: var(--border);
+    border: 1px solid var(--border); border-radius: var(--radius);
+    overflow:hidden;
+    margin-bottom: 18px;
+  }
+  .stat{
+    background: var(--panel-2); padding: 10px 12px;
+  }
+  .stat .stat-label{ font-family: var(--font-mono); font-size:9.5px; letter-spacing:0.1em; color: var(--text-faint); text-transform:uppercase; }
+  .stat .stat-value{ font-family: var(--font-mono); font-size: 15px; color: var(--text); margin-top: 4px; }
+  .stat.speed .stat-value{ color: var(--accent); }
+  .stat.time .stat-value{ color: var(--blue); }
+
+  .transcript-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+  .transcript-head .name{ font-family: var(--font-display); font-size:12px; font-weight:600; color: var(--text); }
+  .transcript-head .path{ font-family: var(--font-mono); font-size:10px; color: var(--text-faint); }
+  .console{
+    background: #0F1214;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 13px;
+    height: 230px;
+    overflow-y:auto;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    line-height: 1.85;
+  }
+  .console::-webkit-scrollbar{ width:8px; }
+  .console::-webkit-scrollbar-thumb{ background: var(--border); border-radius: 4px; }
+  .console .line{ white-space:pre; color: var(--text-dim); }
+  .console .line .tag{ color: var(--text-faint); }
+  .console .line.ok .tag{ color: var(--accent); }
+  .console .line.warn .tag{ color: var(--amber); }
+  .console .line.new .tag{ color: var(--blue); }
+
+  ::selection{ background: var(--accent-glow); }
+
+  @media (max-width: 1100px){
+    .grid{ grid-template-columns: 1fr; }
+    header{ flex-direction:column; }
+    .action-bar{ margin-left:0; width:100%; }
+    .header-right{ align-items:flex-start; width:100%; }
+    .notice{ text-align:left; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="brand">
+      <span class="eyebrow">Windows File Transfer Utility</span>
+      <h1>ROBOCOPY</h1>
+      <div class="tagline">Reliable Windows file transfers, without command-line guesswork</div>
+    </div>
+    <div class="header-right">
+      <div class="notice">
+        <div class="strong">Review the command before using Mirror, Purge, or Move.</div>
+        <div class="sub">Stop ends the current run. Pause keeps Robocopy in memory for Resume.</div>
+      </div>
+      <div class="status-pill idle" id="statusPill">
+        <span class="dot"></span>
+        <span id="statusText">IDLE</span>
+      </div>
+      <div class="action-bar">
+        <button class="start" id="btnStart">START</button>
+        <button class="pause" id="btnPause" disabled>PAUSE</button>
+        <button class="resume" id="btnResume" disabled>RESUME</button>
+        <button class="stop" id="btnStop" disabled>STOP</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="grid">
+
+    <!-- COLUMN 1 — TRANSFER LOCATIONS -->
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <h2>Transfer Locations</h2>
+          <p>Choose what to copy and where it should go</p>
+        </div>
+        <button class="mini-btn" id="btnClear">Clear</button>
+      </div>
+      <div class="panel-body">
+
+        <div class="field-block">
+          <div class="field-label-row"><span class="field-label">Source</span></div>
+          <div class="path-input">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/></svg>
+            <input id="srcInput" type="text" value="D:\Projects\ClientAssets" placeholder="Source directory here">
+          </div>
+        </div>
+
+        <div class="swap-row">
+          <div class="swap-btn" id="btnSwap" title="Swap source and destination">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M7 10V4m0 0L4 7m3-3 3 3"/><path d="M17 14v6m0 0 3-3m-3 3-3-3"/></svg>
+          </div>
+        </div>
+
+        <div class="field-block">
+          <div class="field-label-row"><span class="field-label">Destination</span></div>
+          <div class="path-input">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/></svg>
+            <input id="dstInput" type="text" value="E:\Backups\ClientAssets" placeholder="Destination directory here">
+          </div>
+        </div>
+
+        <div class="field-block" style="margin-bottom:0;">
+          <div class="field-label-row"><span class="field-label">Files</span></div>
+          <div class="path-input">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2Z"/></svg>
+            <input id="filesInput" type="text" value="*.*" placeholder="File pattern, e.g. *.psd">
+          </div>
+        </div>
+
+        <hr class="divider">
+
+        <div class="cmd-label">
+          <span>Review command before running</span>
+          <span class="copy-cmd" id="copyCmd">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="12" height="12" rx="1.5"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></svg>
+            copy
+          </span>
+        </div>
+        <div class="cmd-box" id="cmdBox"></div>
+      </div>
+    </section>
+
+    <!-- COLUMN 2 — STRATEGY -->
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <h2>Choose a Transfer Strategy</h2>
+          <p>Click an option card to include its switch. Conflicts are disabled automatically.</p>
+        </div>
+      </div>
+      <div class="panel-body">
+
+        <div class="group-title">Copy mode</div>
+        <div class="card-grid">
+          <div class="opt-card" data-sw="/MIR" data-group="mode">
+            <div class="row1"><span class="switch">/MIR</span><span class="check"></span></div>
+            <div class="name">Mirror</div>
+            <div class="desc">Destination matches source exactly, deletes extras</div>
+          </div>
+          <div class="opt-card" data-sw="/PURGE" data-group="mode">
+            <div class="row1"><span class="switch">/PURGE</span><span class="check"></span></div>
+            <div class="name">Purge</div>
+            <div class="desc">Removes destination files no longer in source</div>
+          </div>
+          <div class="opt-card" data-sw="/MOVE" data-group="mode">
+            <div class="row1"><span class="switch">/MOVE</span><span class="check"></span></div>
+            <div class="name">Move</div>
+            <div class="desc">Moves files and deletes them from source</div>
+          </div>
+          <div class="opt-card active" data-sw="/E" data-group="">
+            <div class="row1"><span class="switch">/E</span><span class="check"></span></div>
+            <div class="name">Include subfolders</div>
+            <div class="desc">Copies all subfolders, including empty ones</div>
+          </div>
+        </div>
+
+        <div class="group-title">Reliability</div>
+        <div class="card-grid">
+          <div class="opt-card active" data-sw="/Z" data-group="">
+            <div class="row1"><span class="switch">/Z</span><span class="check"></span></div>
+            <div class="name">Restartable mode</div>
+            <div class="desc">Resumes cleanly after a network interruption</div>
+          </div>
+          <div class="opt-card" data-sw="/MT:8" data-group="">
+            <div class="row1"><span class="switch">/MT:8</span><span class="check"></span></div>
+            <div class="name">Multithreaded</div>
+            <div class="desc">Copies with 8 threads for faster transfers</div>
+          </div>
+          <div class="opt-card" data-sw="/XO" data-group="">
+            <div class="row1"><span class="switch">/XO</span><span class="check"></span></div>
+            <div class="name">Skip older files</div>
+            <div class="desc">Only copies files newer than the destination</div>
+          </div>
+          <div class="opt-card" data-sw="/XN" data-group="">
+            <div class="row1"><span class="switch">/XN</span><span class="check"></span></div>
+            <div class="name">Skip newer files</div>
+            <div class="desc">Leaves newer destination files untouched</div>
+          </div>
+        </div>
+
+        <div class="group-title">Retry behavior</div>
+        <div class="card-grid">
+          <div class="opt-card active" data-sw="/R:3" data-group="">
+            <div class="row1"><span class="switch">/R:3</span><span class="check"></span></div>
+            <div class="name">Retry 3 times</div>
+            <div class="desc">Attempts a failed file 3 times before skipping</div>
+          </div>
+          <div class="opt-card active" data-sw="/W:5" data-group="">
+            <div class="row1"><span class="switch">/W:5</span><span class="check"></span></div>
+            <div class="name">Wait 5 seconds</div>
+            <div class="desc">Pause between retries on a failed file</div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- COLUMN 3 — LIVE OVERVIEW -->
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <h2>Live Transfer Overview</h2>
+          <p id="overviewSub">Ready to configure a copy</p>
+        </div>
+      </div>
+      <div class="panel-body">
+
+        <div class="progress-wrap">
+          <div class="progress-label-row">
+            <span class="name">Overall progress</span>
+            <span class="pct" id="pctText">0%</span>
+          </div>
+          <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+        </div>
+
+        <div class="current-file">
+          <div class="cf-label">Current file</div>
+          <div class="cf-name" id="currentFile">—</div>
+        </div>
+
+        <div class="stat-row">
+          <div class="stat speed">
+            <div class="stat-label">Speed</div>
+            <div class="stat-value" id="statSpeed">0 MB/s</div>
+          </div>
+          <div class="stat time">
+            <div class="stat-label">Time left</div>
+            <div class="stat-value" id="statTime">—</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">Files</div>
+            <div class="stat-value" id="statFiles">0 / 0</div>
+          </div>
+        </div>
+
+        <div class="transcript-head">
+          <span class="name">Run transcript</span>
+          <span class="path">saved to %localappdata%</span>
+        </div>
+        <div class="console" id="console">
+          <div class="line"><span class="tag">[idle]</span> Waiting to start…</div>
+        </div>
+
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<script>
+  // ---------- Option card toggling with conflict groups ----------
+  const cards = document.querySelectorAll('.opt-card');
+  cards.forEach(card => {
+    card.addEventListener('click', () => {
+      const group = card.dataset.group;
+      if (group) {
+        cards.forEach(c => { if (c.dataset.group === group && c !== card) c.classList.remove('active'); });
+      }
+      card.classList.toggle('active');
+      updateCommand();
+    });
+  });
+
+  const srcInput = document.getElementById('srcInput');
+  const dstInput = document.getElementById('dstInput');
+  const filesInput = document.getElementById('filesInput');
+  const cmdBox = document.getElementById('cmdBox');
+
+  function buildSwitches(){
+    return Array.from(cards).filter(c => c.classList.contains('active')).map(c => c.dataset.sw);
+  }
+
+  function updateCommand(){
+    const src = srcInput.value || 'Source directory here';
+    const dst = dstInput.value || 'Destination directory here';
+    const files = filesInput.value || '*.*';
+    const switches = buildSwitches();
+    cmdBox.innerHTML =
+      `<span class="k">robocopy</span> <span class="p">"${src}"</span> <span class="p">"${dst}"</span> <span class="c">${files}</span> ` +
+      switches.map(s => `<span class="k">${s}</span>`).join(' ');
+  }
+  [srcInput, dstInput, filesInput].forEach(el => el.addEventListener('input', updateCommand));
+  updateCommand();
+
+  document.getElementById('btnClear').addEventListener('click', () => {
+    srcInput.value = ''; dstInput.value = ''; filesInput.value = '*.*';
+    updateCommand();
+  });
+  document.getElementById('btnSwap').addEventListener('click', () => {
+    const t = srcInput.value; srcInput.value = dstInput.value; dstInput.value = t;
+    updateCommand();
+  });
+  document.getElementById('copyCmd').addEventListener('click', () => {
+    navigator.clipboard?.writeText(cmdBox.innerText);
+  });
+
+  // ---------- Simulated run ----------
+  const btnStart = document.getElementById('btnStart');
+  const btnPause = document.getElementById('btnPause');
+  const btnResume = document.getElementById('btnResume');
+  const btnStop = document.getElementById('btnStop');
+  const statusPill = document.getElementById('statusPill');
+  const statusText = document.getElementById('statusText');
+  const progressFill = document.getElementById('progressFill');
+  const pctText = document.getElementById('pctText');
+  const currentFile = document.getElementById('currentFile');
+  const statSpeed = document.getElementById('statSpeed');
+  const statTime = document.getElementById('statTime');
+  const statFiles = document.getElementById('statFiles');
+  const consoleEl = document.getElementById('console');
+  const overviewSub = document.getElementById('overviewSub');
+
+  const sampleFiles = [
+    'brand_guidelines_v3.pdf','hero_banner_final.psd','q3_report.xlsx','client_logo_set.zip',
+    'meeting_notes_08-07.docx','render_pass_04.exr','invoice_10231.pdf','asset_manifest.json',
+    'presentation_deck.pptx','thumbnail_grid.png'
+  ];
+
+  let progress = 0, fileIdx = 0, totalFiles = 128, timer = null;
+
+  function setStatus(state){
+    statusPill.className = 'status-pill ' + state;
+    statusText.textContent = state.toUpperCase();
+  }
+  function log(tag, msg, cls){
+    const line = document.createElement('div');
+    line.className = 'line' + (cls ? ' ' + cls : '');
+    line.innerHTML = `<span class="tag">[${tag}]</span> ${msg}`;
+    consoleEl.appendChild(line);
+    consoleEl.scrollTop = consoleEl.scrollHeight;
+  }
+
+  function tick(){
+    progress = Math.min(100, progress + Math.random() * 4 + 1);
+    fileIdx = Math.min(totalFiles, Math.floor((progress/100) * totalFiles));
+    progressFill.style.width = progress.toFixed(0) + '%';
+    pctText.textContent = progress.toFixed(0) + '%';
+    const f = sampleFiles[Math.floor(Math.random()*sampleFiles.length)];
+    currentFile.textContent = (dstInput.value || 'E:\\Backups') + '\\' + f;
+    statSpeed.textContent = (18 + Math.random()*40).toFixed(1) + ' MB/s';
+    const secsLeft = Math.max(0, Math.round((100-progress) * 0.6));
+    statTime.textContent = secsLeft > 60 ? Math.floor(secsLeft/60)+'m '+ (secsLeft%60)+'s' : secsLeft+'s';
+    statFiles.textContent = fileIdx + ' / ' + totalFiles;
+    log('copy', f, 'ok');
+
+    if (progress >= 100){
+      clearInterval(timer);
+      setStatus('idle');
+      statusText.textContent = 'DONE';
+      overviewSub.textContent = 'Transfer complete';
+      log('done', `${totalFiles} files copied successfully`, 'ok');
+      btnStart.disabled = false; btnPause.disabled = true; btnResume.disabled = true; btnStop.disabled = true;
+    }
+  }
+
+  btnStart.addEventListener('click', () => {
+    progress = 0; fileIdx = 0;
+    consoleEl.innerHTML = '';
+    log('init', 'Starting robocopy…', 'new');
+    log('scan', `Scanning ${srcInput.value || 'source'} for ${totalFiles} files`, 'new');
+    setStatus('running');
+    overviewSub.textContent = 'Transfer in progress';
+    btnStart.disabled = true; btnPause.disabled = false; btnResume.disabled = true; btnStop.disabled = false;
+    timer = setInterval(tick, 550);
+  });
+
+  btnPause.addEventListener('click', () => {
+    clearInterval(timer);
+    setStatus('paused');
+    overviewSub.textContent = 'Transfer paused';
+    log('pause', 'Robocopy paused, kept in memory', 'warn');
+    btnPause.disabled = true; btnResume.disabled = false;
+  });
+
+  btnResume.addEventListener('click', () => {
+    setStatus('running');
+    overviewSub.textContent = 'Transfer in progress';
+    log('resume', 'Resuming from last checkpoint', 'new');
+    btnResume.disabled = true; btnPause.disabled = false;
+    timer = setInterval(tick, 550);
+  });
+
+  btnStop.addEventListener('click', () => {
+    clearInterval(timer);
+    setStatus('stopped');
+    overviewSub.textContent = 'Transfer stopped';
+    log('stop', 'Run ended by user', 'warn');
+    btnStart.disabled = false; btnPause.disabled = true; btnResume.disabled = true; btnStop.disabled = true;
+  });
+</script>
+</body>
+</html>

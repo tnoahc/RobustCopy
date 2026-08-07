@@ -24,8 +24,8 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
     private string _commandPreview = string.Empty;
     private string _statusText = "Ready to configure a copy";
     private string _validationText = string.Empty;
-    private string _currentFile = "No active file";
-    private string _logText = string.Empty;
+    private string _currentFile = "—";
+    private string _logText = "[idle] Waiting to start…";
     private string _lastLogPath = string.Empty;
     private CopyJobStage _stage = CopyJobStage.Idle;
     private double _overallPercent;
@@ -49,7 +49,9 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
         _dialogs = dialogs;
         _launcher = launcher;
         Options = new ObservableCollection<OptionItemViewModel>(
-            RobocopyOptionCatalog.All.Select(definition => new OptionItemViewModel(definition, OnOptionChanged)));
+            RobocopyOptionCatalog.All
+                .Select(definition => new OptionItemViewModel(definition, OnOptionChanged))
+                .OrderBy(option => option.DisplayOrder));
         OptionsView = CollectionViewSource.GetDefaultView(Options);
         OptionsView.GroupDescriptions.Add(new PropertyGroupDescription(nameof(OptionItemViewModel.Category)));
 
@@ -74,6 +76,10 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
 
     public ObservableCollection<OptionItemViewModel> Options { get; }
     public ICollectionView OptionsView { get; }
+    public IEnumerable<OptionItemViewModel> CopyModeOptions => Options.Where(option => option.Category == "Copy mode");
+    public IEnumerable<OptionItemViewModel> ReliabilityOptions => Options.Where(option => option.Category == "Reliability");
+    public IEnumerable<OptionItemViewModel> RetryOptions => Options.Where(option => option.Category == "Retry behavior");
+    public IEnumerable<OptionItemViewModel> OtherOptions => Options.Where(option => option.Category is not ("Copy mode" or "Reliability" or "Retry behavior"));
 
     public RelayCommand BrowseSourceCommand { get; }
     public RelayCommand BrowseDestinationCommand { get; }
@@ -135,7 +141,8 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
     public string CurrentFile { get => _currentFile; private set => SetProperty(ref _currentFile, value); }
     public string LogText { get => _logText; private set => SetProperty(ref _logText, value); }
     public string LastLogPath { get => _lastLogPath; private set { if (SetProperty(ref _lastLogPath, value)) RefreshCommands(); } }
-    public CopyJobStage Stage { get => _stage; private set { if (SetProperty(ref _stage, value)) { OnPropertyChanged(nameof(IsBusy)); OnPropertyChanged(nameof(IsScanning)); RefreshCommands(); } } }
+    public CopyJobStage Stage { get => _stage; private set { if (SetProperty(ref _stage, value)) { OnPropertyChanged(nameof(StageText)); OnPropertyChanged(nameof(IsBusy)); OnPropertyChanged(nameof(IsScanning)); RefreshCommands(); } } }
+    public string StageText => Stage.ToString().ToUpperInvariant();
     public bool IsBusy => Stage is CopyJobStage.Scanning or CopyJobStage.Running or CopyJobStage.Paused or CopyJobStage.Stopping;
     public bool IsScanning => Stage == CopyJobStage.Scanning;
     public double OverallPercent { get => _overallPercent; private set { if (SetProperty(ref _overallPercent, value)) OnPropertyChanged(nameof(OverallPercentText)); } }
@@ -149,10 +156,10 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
     public bool IsEstimated { get => _isEstimated; private set { if (SetProperty(ref _isEstimated, value)) OnPropertyChanged(nameof(OverallLabel)); } }
 
     public string OverallLabel => IsEstimated ? "Overall progress (estimated)" : "Overall progress";
-    public string OverallPercentText => $"{OverallPercent:0.0}%";
-    public string CurrentFilePercentText => $"{CurrentFilePercent:0.0}%";
+    public string OverallPercentText => $"{OverallPercent:0}%";
+    public string CurrentFilePercentText => $"{CurrentFilePercent:0}%";
     public string TransferredText => $"{FormatBytes(BytesCopied)} / {FormatBytes(TotalBytes)}";
-    public string SpeedText => BytesPerSecond <= 0 ? "—" : $"{FormatBytes((long)BytesPerSecond)}/s";
+    public string SpeedText => BytesPerSecond <= 0 ? "0 MB/s" : $"{FormatBytes((long)BytesPerSecond)}/s";
     public string EtaText => Eta is null ? "—" : Eta.Value.TotalHours >= 1 ? $"{Eta:hh\\:mm\\:ss}" : $"{Eta:mm\\:ss}";
     public string FilesText => $"{FilesCompleted:N0} / {TotalFiles:N0}";
 

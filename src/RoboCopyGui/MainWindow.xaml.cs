@@ -1,5 +1,7 @@
 using System.ComponentModel;
+using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Interop;
 using RoboCopyGui.Services;
 using RoboCopyGui.ViewModels;
 
@@ -7,6 +9,7 @@ namespace RoboCopyGui;
 
 public partial class MainWindow : Window
 {
+    private const int DwmUseImmersiveDarkMode = 20;
     private bool _allowClose;
     private readonly MainViewModel _viewModel;
 
@@ -17,6 +20,20 @@ public partial class MainWindow : Window
         _viewModel = new MainViewModel(new RobocopyRunner(), desktopServices, desktopServices, desktopServices);
         DataContext = _viewModel;
     }
+
+    protected override void OnSourceInitialized(EventArgs e)
+    {
+        base.OnSourceInitialized(e);
+        var enabled = 1;
+        _ = DwmSetWindowAttribute(
+            new WindowInteropHelper(this).Handle,
+            DwmUseImmersiveDarkMode,
+            ref enabled,
+            Marshal.SizeOf<int>());
+    }
+
+    [DllImport("dwmapi.dll")]
+    private static extern int DwmSetWindowAttribute(IntPtr window, int attribute, ref int value, int valueSize);
 
     private async void Window_Closing(object? sender, CancelEventArgs e)
     {
