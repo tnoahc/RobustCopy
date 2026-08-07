@@ -229,6 +229,46 @@
             </Setter>
         </Style>
 
+        <Style x:Key="DarkVerticalScrollBarStyle" TargetType="ScrollBar">
+            <Setter Property="Width" Value="8" />
+            <Setter Property="MinWidth" Value="8" />
+            <Setter Property="Background" Value="{StaticResource BgRaisedBrush}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ScrollBar">
+                        <Grid Background="{TemplateBinding Background}">
+                            <Track x:Name="PART_Track"
+                                   Orientation="Vertical"
+                                   IsDirectionReversed="True"
+                                   Focusable="False">
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Command="{x:Static ScrollBar.PageUpCommand}"
+                                                  IsTabStop="False"
+                                                  Opacity="0" />
+                                </Track.DecreaseRepeatButton>
+                                <Track.Thumb>
+                                    <Thumb MinHeight="24">
+                                        <Thumb.Template>
+                                            <ControlTemplate TargetType="Thumb">
+                                                <Border Background="{StaticResource BorderBrushDark}"
+                                                        CornerRadius="4"
+                                                        Margin="1" />
+                                            </ControlTemplate>
+                                        </Thumb.Template>
+                                    </Thumb>
+                                </Track.Thumb>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Command="{x:Static ScrollBar.PageDownCommand}"
+                                                  IsTabStop="False"
+                                                  Opacity="0" />
+                                </Track.IncreaseRepeatButton>
+                            </Track>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <DataTemplate x:Key="OptionCardTemplate">
             <Grid Height="98" Margin="4">
                 <ToggleButton IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
@@ -717,7 +757,10 @@
                         <ScrollViewer Grid.Row="1"
                                       Padding="14,2,14,10"
                                       HorizontalScrollBarVisibility="Disabled"
-                                      VerticalScrollBarVisibility="Hidden">
+                                      VerticalScrollBarVisibility="Auto">
+                            <ScrollViewer.Resources>
+                                <Style TargetType="ScrollBar" BasedOn="{StaticResource DarkVerticalScrollBarStyle}" />
+                            </ScrollViewer.Resources>
                             <StackPanel>
                                 <TextBlock Text="FOLDERS" Style="{StaticResource MonoLabelStyle}" Margin="4,14,4,5" />
                                 <ItemsControl ItemsSource="{Binding FolderOptions}" ItemTemplate="{StaticResource OptionCardTemplate}">
