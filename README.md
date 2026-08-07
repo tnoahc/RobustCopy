@@ -1,5 +1,9 @@
 # RobustCopy
 
+<p align="center">
+  <img src="src/RobustCopy/Assets/RobustCopyIcon.png" alt="RobustCopy app icon" width="160">
+</p>
+
 A native Windows interface for `robocopy.exe`, built with .NET 10 WPF. It keeps Robocopy's reliability while adding safe option selection, descriptive help, pre-scan totals, live progress, Pause/Resume/Stop controls, command preview, and persistent logs.
 
 The interface design references are kept in [`docs/mockups`](docs/mockups/README.md).

@@ -6,6 +6,7 @@
         xmlns:core="clr-namespace:RobustCopy.Core"
         mc:Ignorable="d"
         Title="RobustCopy"
+        Icon="Assets/RobustCopy.ico"
         Width="1200"
         Height="680"
         MinWidth="1000"

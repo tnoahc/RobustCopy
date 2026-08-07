@@ -19,11 +19,16 @@
     <Copyright>Copyright © 2026 Kaleb Creative Studio</Copyright>
     <RootNamespace>RobustCopy</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\RobustCopy.ico</ApplicationIcon>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <PublishSingleFile>true</PublishSingleFile>
     <PublishSelfContained>true</PublishSelfContained>
     <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\RobustCopy.ico" />
+  </ItemGroup>
 
 </Project>
