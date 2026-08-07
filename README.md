@@ -6,9 +6,10 @@ The interface design references are kept in [`docs/mockups`](docs/mockups/README
 
 ## Features
 
-- Browse or type local, mapped-drive, and UNC source/destination folders.
+- Choose local, mapped-drive, and UNC source/destination folders through the Windows folder picker.
 - Swap source and destination in one click.
-- Select categorized Robocopy options with descriptions and conflict handling.
+- Select Robocopy switches from categorized, two-column strategy cards with descriptions and automatic conflict handling.
+- Enter additional supported switches in the Advanced field.
 - Preview the exact command while configuring a job.
 - Pre-scan safely with `/L` for planned files, bytes, and destination deletions.
 - Show overall/current-file progress, transfer speed, ETA, file counts, and live output.
@@ -18,6 +19,16 @@ The interface design references are kept in [`docs/mockups`](docs/mockups/README
 - Run Robocopy without `cmd.exe`; paths and switches are passed through `ProcessStartInfo.ArgumentList`.
 
 Robocopy console output is decoded using the active Windows OEM code page and then written as UTF-8. The GUI reserves `/UNICODE` because the installed Robocopy build emits a mixed BOM/console stream for that switch when stdout is redirected, which cannot be parsed reliably for live progress.
+
+## Interface
+
+The application uses a dark console-inspired three-panel layout:
+
+- **Transfer locations** contains the source, destination, file pattern, and command preview.
+- **Transfer strategy** provides scrollable option cards grouped by copy mode, reliability, retry behavior, and additional options.
+- **Live transfer overview** shows progress, current-file details, transfer metrics, and the saved run transcript.
+
+The Start, Pause, Resume, and Stop controls remain visible in the header, alongside safety guidance and the current run state. The interactive HTML source and rendered visual reference are documented in [`docs/mockups`](docs/mockups/README.md).
 
 ## Requirements
 
@@ -55,6 +66,8 @@ dotnet publish src\RoboCopyGui\RoboCopyGui.csproj `
 ```
 
 The main deliverable is `artifacts\publish\RoboCopyGUI.exe`.
+
+The `artifacts/` directory contains generated build outputs and visual verification files and is intentionally excluded from version control. Run the publish command whenever the distributable executable needs to be refreshed.
 
 ## Safety notes
 
