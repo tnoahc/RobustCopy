@@ -1,5 +1,6 @@
 using RoboCopyGui.Core;
 using RoboCopyGui.Services;
+using RoboCopyGui.ViewModels;
 
 var tests = new (string Name, Func<Task> Run)[]
 {
@@ -7,6 +8,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ("Command builder keeps paths as individual arguments", TestCommandBuilderAsync),
     ("Validator blocks overlapping paths", TestOverlappingPathsAsync),
     ("Validator reports option conflicts", TestOptionConflictsAsync),
+    ("Option catalog preserves the original category organization", TestOptionCategoriesAsync),
     ("Validator protects GUI-owned advanced flags", TestAdvancedProtectionAsync),
     ("Output parser reads bytes, paths, percentages, and extras", TestOutputParserAsync),
     ("Exit codes map to Robocopy outcomes", TestExitCodesAsync),
@@ -72,6 +74,31 @@ static Task TestOptionConflictsAsync()
     var request = Request(@"C:\Source", @"D:\Destination", new("Subdirectories"), new("EmptySubdirectories"));
     var errors = CopyJobValidator.Validate(request, requireExistingSource: false);
     True(errors.Any(error => error.Contains("cannot be combined", StringComparison.OrdinalIgnoreCase)), "Expected conflict error.");
+    return Task.CompletedTask;
+}
+
+static Task TestOptionCategoriesAsync()
+{
+    var expectedCounts = new Dictionary<string, int>
+    {
+        ["Folders"] = 6,
+        ["Reliability"] = 5,
+        ["Metadata"] = 4,
+        ["Filters"] = 9,
+        ["Performance"] = 5,
+        ["Destructive operations"] = 4
+    };
+    var options = RobocopyOptionCatalog.All
+        .Select(definition => new OptionItemViewModel(definition, _ => { }))
+        .ToList();
+
+    Equal(33, options.Count);
+    Equal(33, options.Select(option => option.Id).Distinct(StringComparer.Ordinal).Count());
+    foreach (var expected in expectedCounts)
+    {
+        Equal(expected.Value, options.Count(option => option.Category == expected.Key));
+    }
+    True(options.All(option => option.Category == option.Definition.Category), "UI categories must match the catalog categories.");
     return Task.CompletedTask;
 }
 

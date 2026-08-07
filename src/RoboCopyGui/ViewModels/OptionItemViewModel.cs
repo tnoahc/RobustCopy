@@ -54,27 +54,7 @@ public sealed class OptionItemViewModel : ObservableObject
         "Wait" => "Pause between retries on a failed file.",
         _ => Definition.Description
     };
-    public string Category => Id switch
-    {
-        "Mirror" or "Purge" or "MoveTree" or "EmptySubdirectories" => "Copy mode",
-        "Restartable" or "MultiThreaded" or "ExcludeOlder" or "ExcludeNewer" => "Reliability",
-        "Retries" or "Wait" => "Retry behavior",
-        _ => Definition.Category
-    };
-    public int DisplayOrder => Id switch
-    {
-        "Mirror" => 0,
-        "Purge" => 1,
-        "MoveTree" => 2,
-        "EmptySubdirectories" => 3,
-        "Restartable" => 4,
-        "MultiThreaded" => 5,
-        "ExcludeOlder" => 6,
-        "ExcludeNewer" => 7,
-        "Retries" => 8,
-        "Wait" => 9,
-        _ => 100
-    };
+    public string Category => Definition.Category;
     public bool HasValue => Definition.ValueKind != OptionValueKind.None;
     public bool IsDestructive => Definition.IsDestructive;
 

@@ -25,7 +25,7 @@ Robocopy console output is decoded using the active Windows OEM code page and th
 The application uses a dark console-inspired three-panel layout:
 
 - **Transfer locations** contains the source, destination, file pattern, and command preview.
-- **Transfer strategy** provides scrollable option cards grouped by copy mode, reliability, retry behavior, and additional options.
+- **Transfer strategy** provides scrollable option cards using the original Folders, Reliability, Metadata, Filters, Performance, and Destructive Operations groups.
 - **Live transfer overview** shows progress, current-file details, transfer metrics, and the saved run transcript.
 
 The Start, Pause, Resume, and Stop controls remain visible in the header, alongside safety guidance and the current run state. The interactive HTML source and rendered visual reference are documented in [`docs/mockups`](docs/mockups/README.md).

@@ -1,9 +1,7 @@
 using System.Collections.ObjectModel;
-using System.ComponentModel;
 using System.IO;
 using System.Text;
 using System.Windows;
-using System.Windows.Data;
 using RoboCopyGui.Core;
 using RoboCopyGui.Services;
 
@@ -49,11 +47,7 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
         _dialogs = dialogs;
         _launcher = launcher;
         Options = new ObservableCollection<OptionItemViewModel>(
-            RobocopyOptionCatalog.All
-                .Select(definition => new OptionItemViewModel(definition, OnOptionChanged))
-                .OrderBy(option => option.DisplayOrder));
-        OptionsView = CollectionViewSource.GetDefaultView(Options);
-        OptionsView.GroupDescriptions.Add(new PropertyGroupDescription(nameof(OptionItemViewModel.Category)));
+            RobocopyOptionCatalog.All.Select(definition => new OptionItemViewModel(definition, OnOptionChanged)));
 
         BrowseSourceCommand = new RelayCommand(BrowseSource, () => !IsBusy);
         BrowseDestinationCommand = new RelayCommand(BrowseDestination, () => !IsBusy);
@@ -75,11 +69,12 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
     }
 
     public ObservableCollection<OptionItemViewModel> Options { get; }
-    public ICollectionView OptionsView { get; }
-    public IEnumerable<OptionItemViewModel> CopyModeOptions => Options.Where(option => option.Category == "Copy mode");
+    public IEnumerable<OptionItemViewModel> FolderOptions => Options.Where(option => option.Category == "Folders");
     public IEnumerable<OptionItemViewModel> ReliabilityOptions => Options.Where(option => option.Category == "Reliability");
-    public IEnumerable<OptionItemViewModel> RetryOptions => Options.Where(option => option.Category == "Retry behavior");
-    public IEnumerable<OptionItemViewModel> OtherOptions => Options.Where(option => option.Category is not ("Copy mode" or "Reliability" or "Retry behavior"));
+    public IEnumerable<OptionItemViewModel> MetadataOptions => Options.Where(option => option.Category == "Metadata");
+    public IEnumerable<OptionItemViewModel> FilterOptions => Options.Where(option => option.Category == "Filters");
+    public IEnumerable<OptionItemViewModel> PerformanceOptions => Options.Where(option => option.Category == "Performance");
+    public IEnumerable<OptionItemViewModel> DestructiveOptions => Options.Where(option => option.Category == "Destructive operations");
 
     public RelayCommand BrowseSourceCommand { get; }
     public RelayCommand BrowseDestinationCommand { get; }

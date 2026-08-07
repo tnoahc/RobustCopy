@@ -719,8 +719,8 @@
                                       HorizontalScrollBarVisibility="Disabled"
                                       VerticalScrollBarVisibility="Hidden">
                             <StackPanel>
-                                <TextBlock Text="COPY MODE" Style="{StaticResource MonoLabelStyle}" Margin="4,14,4,5" />
-                                <ItemsControl ItemsSource="{Binding CopyModeOptions}" ItemTemplate="{StaticResource OptionCardTemplate}">
+                                <TextBlock Text="FOLDERS" Style="{StaticResource MonoLabelStyle}" Margin="4,14,4,5" />
+                                <ItemsControl ItemsSource="{Binding FolderOptions}" ItemTemplate="{StaticResource OptionCardTemplate}">
                                     <ItemsControl.ItemsPanel>
                                         <ItemsPanelTemplate><UniformGrid Columns="2" /></ItemsPanelTemplate>
                                     </ItemsControl.ItemsPanel>
@@ -733,15 +733,29 @@
                                     </ItemsControl.ItemsPanel>
                                 </ItemsControl>
 
-                                <TextBlock Text="RETRY BEHAVIOR" Style="{StaticResource MonoLabelStyle}" Margin="4,14,4,5" />
-                                <ItemsControl ItemsSource="{Binding RetryOptions}" ItemTemplate="{StaticResource OptionCardTemplate}">
+                                <TextBlock Text="METADATA" Style="{StaticResource MonoLabelStyle}" Margin="4,14,4,5" />
+                                <ItemsControl ItemsSource="{Binding MetadataOptions}" ItemTemplate="{StaticResource OptionCardTemplate}">
                                     <ItemsControl.ItemsPanel>
                                         <ItemsPanelTemplate><UniformGrid Columns="2" /></ItemsPanelTemplate>
                                     </ItemsControl.ItemsPanel>
                                 </ItemsControl>
 
-                                <TextBlock Text="MORE OPTIONS" Style="{StaticResource MonoLabelStyle}" Margin="4,14,4,5" />
-                                <ItemsControl ItemsSource="{Binding OtherOptions}" ItemTemplate="{StaticResource OptionCardTemplate}">
+                                <TextBlock Text="FILTERS" Style="{StaticResource MonoLabelStyle}" Margin="4,14,4,5" />
+                                <ItemsControl ItemsSource="{Binding FilterOptions}" ItemTemplate="{StaticResource OptionCardTemplate}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate><UniformGrid Columns="2" /></ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                </ItemsControl>
+
+                                <TextBlock Text="PERFORMANCE" Style="{StaticResource MonoLabelStyle}" Margin="4,14,4,5" />
+                                <ItemsControl ItemsSource="{Binding PerformanceOptions}" ItemTemplate="{StaticResource OptionCardTemplate}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate><UniformGrid Columns="2" /></ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                </ItemsControl>
+
+                                <TextBlock Text="DESTRUCTIVE OPERATIONS" Style="{StaticResource MonoLabelStyle}" Margin="4,14,4,5" />
+                                <ItemsControl ItemsSource="{Binding DestructiveOptions}" ItemTemplate="{StaticResource OptionCardTemplate}">
                                     <ItemsControl.ItemsPanel>
                                         <ItemsPanelTemplate><UniformGrid Columns="2" /></ItemsPanelTemplate>
                                     </ItemsControl.ItemsPanel>
