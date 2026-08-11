@@ -143,8 +143,8 @@ For privacy questions or requests, contact:
 
 **Kaleb Creative Studio**
 
-Product and publisher contact page: https://gitlab.tarinyebwa.com/tnoahc/robustcopy
+Product and publisher contact page: https://github.com/tnoahc/robust-copy
 
-Issue tracker: https://gitlab.tarinyebwa.com/tnoahc/robustcopy/-/issues
+Issue tracker: https://github.com/tnoahc/robust-copy/issues
 
 Do not include confidential files, paths, transcripts, account information, or other sensitive personal information in a public issue. If a request requires sensitive information, first use the issue tracker to request a private communication channel.

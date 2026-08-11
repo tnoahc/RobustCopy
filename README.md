@@ -12,9 +12,8 @@ The interface design references are kept in [`docs/mockups`](docs/mockups/README
 
 The current release is **RobustCopy 1.0.1**, published by **Kaleb Creative Studio** for Windows 10 and Windows 11 x64.
 
-- [Download RobustCopy.exe](https://gitlab.tarinyebwa.com/api/v4/projects/tnoahc%2Frobustcopy/packages/generic/RobustCopy/v1%2E0%2E1/RobustCopy%2Eexe)
-- [Download the smaller ZIP package](https://gitlab.tarinyebwa.com/api/v4/projects/tnoahc%2Frobustcopy/packages/generic/RobustCopy/v1%2E0%2E1/RobustCopy-1%2E0%2E1-windows-x64%2Ezip)
-- [View the GitHub releases page](https://github.com/tnoahc/robust-copy/releases)
+- [Download RobustCopy.exe](https://github.com/tnoahc/robust-copy/releases/download/v1.0.1/RobustCopy.exe)
+- [View the GitHub release](https://github.com/tnoahc/robust-copy/releases/tag/v1.0.1)
 - [Browse the GitHub repository](https://github.com/tnoahc/robust-copy)
 
 The 62.1 MB executable is self-contained; no separate .NET installation is required. Its SHA-256 checksum is:
