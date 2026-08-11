@@ -14,8 +14,8 @@ The current release is **RobustCopy 1.0.1**, published by **Kaleb Creative Studi
 
 - [Download RobustCopy.exe](https://gitlab.tarinyebwa.com/api/v4/projects/tnoahc%2Frobustcopy/packages/generic/RobustCopy/v1%2E0%2E1/RobustCopy%2Eexe)
 - [Download the smaller ZIP package](https://gitlab.tarinyebwa.com/api/v4/projects/tnoahc%2Frobustcopy/packages/generic/RobustCopy/v1%2E0%2E1/RobustCopy-1%2E0%2E1-windows-x64%2Ezip)
-- [View the GitLab v1.0.1 release](https://gitlab.tarinyebwa.com/tnoahc/robustcopy/-/releases/v1.0.1)
-- [Browse the GitLab repository](https://gitlab.tarinyebwa.com/tnoahc/robustcopy)
+- [View the GitHub releases page](https://github.com/tnoahc/robust-copy/releases)
+- [Browse the GitHub repository](https://github.com/tnoahc/robust-copy)
 
 The 62.1 MB executable is self-contained; no separate .NET installation is required. Its SHA-256 checksum is:
 
