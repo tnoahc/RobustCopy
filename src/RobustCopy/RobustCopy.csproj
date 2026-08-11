@@ -13,7 +13,7 @@
     <Company>Kaleb Creative Studio</Company>
     <Authors>Kaleb Creative Studio</Authors>
     <Description>A focused Windows desktop interface for reliable Robocopy file transfers.</Description>
-    <RepositoryUrl>https://github.com/tnoahc/robust-copy</RepositoryUrl>
+    <RepositoryUrl>https://github.com/tnoahc/RobustCopy</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <Copyright>Copyright © 2026 Kaleb Creative Studio</Copyright>
