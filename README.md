@@ -15,6 +15,7 @@ The current release is **RobustCopy 1.0.1**, published by **Kaleb Creative Studi
 - [Download RobustCopy.exe](https://github.com/tnoahc/RobustCopy/releases/download/v1.0.1/RobustCopy.exe)
 - [View the GitHub release](https://github.com/tnoahc/RobustCopy/releases/tag/v1.0.1)
 - [Browse the GitHub repository](https://github.com/tnoahc/RobustCopy)
+- [Read the privacy policy](PRIVACY.md)
 
 The 62.1 MB executable is self-contained; no separate .NET installation is required. Its SHA-256 checksum is:
 
