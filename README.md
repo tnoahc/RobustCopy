@@ -121,10 +121,18 @@ The GitLab pipeline in [`.gitlab-ci.yml`](.gitlab-ci.yml) runs on merge requests
 
 - **build** runs `dotnet build RobustCopy.slnx --configuration Release`.
 - **test** runs the test project above; any failing test fails the job.
-- **publish** runs on tags only. It produces the self-contained `RobustCopy.exe` plus `RobustCopy.exe.sha256` (in the checksum format shown above) and keeps both as job artifacts.
-- **release** runs on tags only, after **publish**. It uploads both files to the project's Generic Package Registry as package `RobustCopy`, version = the tag without a leading `v` (so tags look like `v1.2.3`), and then creates a GitLab Release named `RobustCopy <tag>` whose description contains the SHA-256 line and whose asset links point at the two package files. It uses only PowerShell `Invoke-RestMethod` with `CI_JOB_TOKEN` (no `release-cli` or `glab`). The job fails if a release for the tag already exists.
+- **release** runs on version tags only (`v1.2.3`), after the tests pass, using [`ci/release.ps1`](ci/release.ps1):
+  1. Builds the self-contained `RobustCopy.exe` and writes `RobustCopy.exe.sha256` in the checksum format shown above.
+  2. Pushes the tag to GitHub and creates the GitHub release `RobustCopy <version>` with `RobustCopy.exe`, `RobustCopy.exe.sha256`, and `RobustCopy.pdb`. The release is created as a draft and published only after every file has uploaded. Its notes come from the README's "What's new in <version>" section, followed by the checksum.
+  3. Creates the GitLab release with the same notes and download links that point to the GitHub files. The executable is not uploaded to GitLab, because the GitLab instance's proxy cannot accept uploads that large.
 
-The jobs need a Windows runner using the shell executor with PowerShell, because WPF and the Robocopy integration tests cannot run in Docker and require a real `C:\Windows\System32\robocopy.exe`. The .NET 10 SDK is expected to be preinstalled on the runner; a commented-out `dotnet-install.ps1` fallback is kept in `.gitlab-ci.yml` for runners without it. Creating releases requires the Package Registry to be enabled and the user who pushes the tag to have at least the Developer role. Jobs select the runner by the `windows` tag, which is set once under `default: tags:` and should be changed to match your runner.
+  The job fails with a clear message if a release for the tag already exists, or if an upload fails (the GitHub release is then left as a draft).
+
+The jobs need a Windows runner using the shell executor with PowerShell, because WPF and the Robocopy integration tests cannot run in Docker and require a real `C:\Windows\System32\robocopy.exe`. The .NET 10 SDK is expected to be preinstalled on the runner; a commented-out `dotnet-install.ps1` fallback is kept in `.gitlab-ci.yml` for runners without it. Jobs select the runner by the `windows` tag, which is set once under `default: tags:`.
+
+Releasing requires a `GITHUB_TOKEN` CI variable that is masked and protected: a fine-grained GitHub token with **Contents: read and write** on `tnoahc/RobustCopy`. Version tags (`v*`) must be protected so that tag pipelines can read it.
+
+To release a new version: bump `<Version>` in `src/RobustCopy/RobustCopy.csproj` and the version in `src/RobustCopy/app.manifest`, update the version and links in this README's Download section and add a "What's new in <version>" section, merge, then tag the merge commit (for example `git tag -a v1.0.3 -m "RobustCopy 1.0.3"`) and push the tag to GitLab.
 
 ## Safety notes
 

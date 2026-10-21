@@ -6,7 +6,7 @@
 # Docker executors cannot build WPF or run robocopy.
 
 # Run pipelines for merge requests, the default branch, and tags (tags are
-# needed for the publish job). Pushes to other branches do not create branch
+# needed for the release job). Pushes to other branches do not create branch
 # pipelines, so a branch with an open merge request gets only one pipeline.
 workflow:
   rules:
@@ -17,7 +17,6 @@ workflow:
 stages:
   - build
   - test
-  - publish
   - release
 
 variables:
@@ -71,118 +70,29 @@ test:
     - dotnet run --project tests\RobustCopy.Tests\RobustCopy.Tests.csproj --configuration Release
     - if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-publish:
-  stage: publish
-  rules:
-    - if: $CI_COMMIT_TAG
-  script:
-    - dotnet publish src\RobustCopy\RobustCopy.csproj --configuration Release --runtime win-x64 --self-contained true --output artifacts\publish
-    - if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-    # Same format as the README: "HASH  RobustCopy.exe" (uppercase hex, two spaces).
-    - $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath "artifacts\publish\RobustCopy.exe").Hash
-    - '[IO.File]::WriteAllText((Join-Path $env:CI_PROJECT_DIR "artifacts\publish\RobustCopy.exe.sha256"), "$hash  RobustCopy.exe`n")'
-    - Get-Content "artifacts\publish\RobustCopy.exe.sha256"
-  artifacts:
-    name: "RobustCopy-$CI_COMMIT_TAG"
-    paths:
-      - artifacts/publish/RobustCopy.exe
-      - artifacts/publish/RobustCopy.exe.sha256
-    expire_in: never
-
-# Publish the tagged build as a GitLab Release without release-cli or glab
-# (neither is installed on the Windows runner): upload both files to the
-# Generic Package Registry, then create a release whose asset links point at
-# them. Both API calls authenticate with CI_JOB_TOKEN via the JOB-TOKEN header.
-# Requirements to check on the GitLab instance:
-# - The Package Registry is enabled for the project.
-# - The user who pushes the tag has at least the Developer role, and is
-#   allowed to create releases for the tag if tags are protected.
-# - Re-running this job uploads the package files again. That fails if the
-#   project disallows duplicate generic packages; delete the old package
-#   version first in that case.
+# Tagged builds are released by ci/release.ps1:
+# - builds the self-contained RobustCopy.exe and RobustCopy.exe.sha256,
+# - pushes the tag to GitHub and creates the GitHub release with the exe,
+#   checksum, and pdb (draft first, published once every file is uploaded),
+# - creates the GitLab release with links to those GitHub files.
+# The executable is not uploaded to GitLab: the instance sits behind a proxy
+# that times out on uploads that large.
+# Requirements: GITHUB_TOKEN as a masked, protected CI variable (fine-grained
+# token, Contents: read and write on tnoahc/RobustCopy), and v* tags protected
+# so that tag pipelines can read it.
 release:
   stage: release
   rules:
-    - if: $CI_COMMIT_TAG
-  needs:
-    - job: publish
-      artifacts: true
-  # No build here, so skip the default dotnet/NuGet setup and cache.
-  cache: []
-  before_script:
-    - $ErrorActionPreference = "Stop"
-    # Windows PowerShell 5.1 may not enable TLS 1.2 by default.
-    - '[Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12'
+    - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+$/
+  variables:
+    # A full clone, so the tag and its history can be pushed to GitHub.
+    GIT_DEPTH: "0"
+    GITHUB_REPOSITORY: tnoahc/RobustCopy
   script:
-    - |
-      # Generic package versions are restricted, so require "v1.2.3"-style
-      # tags: the version is the tag without a leading "v", made of letters
-      # and digits separated by single dots or dashes.
-      $tag = $env:CI_COMMIT_TAG
-      $version = $tag -replace '^v', ''
-      if ($version -notmatch '^[0-9A-Za-z]+([.-][0-9A-Za-z]+)*$') {
-        Write-Host "ERROR: tag '$tag' gives package version '$version', which is not a valid generic package version (letters and digits separated by dots or dashes)."
-        exit 1
-      }
-      $headers = @{ 'JOB-TOKEN' = $env:CI_JOB_TOKEN }
-      $projectApi = "$env:CI_API_V4_URL/projects/$env:CI_PROJECT_ID"
-      $packageUrl = "$projectApi/packages/generic/RobustCopy/$version"
-      $publishDir = Join-Path $env:CI_PROJECT_DIR 'artifacts\publish'
-
-      # 1. Upload both files to the Generic Package Registry.
-      foreach ($file in @('RobustCopy.exe', 'RobustCopy.exe.sha256')) {
-        $path = Join-Path $publishDir $file
-        if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
-          Write-Host "ERROR: $path not found; the publish job artifacts were not downloaded."
-          exit 1
-        }
-        Write-Host "Uploading $file to $packageUrl/$file"
-        try {
-          Invoke-RestMethod -Method Put -Uri "$packageUrl/$file" -Headers $headers -InFile $path -ContentType 'application/octet-stream' -UseBasicParsing | Out-Null
-        } catch {
-          $err = $_
-          Write-Host "ERROR: uploading $file to the Generic Package Registry failed: $($err.Exception.Message) $($err.ErrorDetails.Message)"
-          exit 1
-        }
-      }
-
-      # 2. Create the release, linking to the uploaded package files.
-      $checksum = (Get-Content -Raw -LiteralPath (Join-Path $publishDir 'RobustCopy.exe.sha256')).Trim()
-      $fence = '```'
-      $description = (
-        "Self-contained Windows x64 build of RobustCopy $tag.",
-        '',
-        'SHA-256 (RobustCopy.exe.sha256):',
-        '',
-        $fence,
-        $checksum,
-        $fence
-      ) -join "`n"
-      $release = [ordered]@{
-        tag_name    = $tag
-        name        = "RobustCopy $tag"
-        description = $description
-        assets      = [ordered]@{
-          links = @(
-            [ordered]@{ name = 'RobustCopy.exe'; url = "$packageUrl/RobustCopy.exe"; link_type = 'package'; direct_asset_path = '/RobustCopy.exe' },
-            [ordered]@{ name = 'RobustCopy.exe.sha256'; url = "$packageUrl/RobustCopy.exe.sha256"; link_type = 'other'; direct_asset_path = '/RobustCopy.exe.sha256' }
-          )
-        }
-      }
-      $json = $release | ConvertTo-Json -Depth 5
-      $body = [Text.Encoding]::UTF8.GetBytes($json)
-      Write-Host "Creating release $tag"
-      try {
-        $created = Invoke-RestMethod -Method Post -Uri "$projectApi/releases" -Headers $headers -ContentType 'application/json; charset=utf-8' -Body $body -UseBasicParsing
-      } catch {
-        $err = $_
-        $status = 0
-        if ($err.Exception.Response) { $status = [int]$err.Exception.Response.StatusCode }
-        if ($status -eq 409) {
-          Write-Host "ERROR: a GitLab release for tag '$tag' already exists (HTTP 409). Delete that release or push a new tag, then re-run this job."
-        } else {
-          Write-Host "ERROR: creating the GitLab release failed (HTTP $status): $($err.Exception.Message) $($err.ErrorDetails.Message)"
-        }
-        exit 1
-      }
-      Write-Host "Created release '$($created.name)' for tag $($created.tag_name)."
+    - powershell -NoProfile -ExecutionPolicy Bypass -File ci\release.ps1
+    - if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+  artifacts:
+    name: "RobustCopy-$CI_COMMIT_TAG-sha256"
+    paths:
+      - artifacts/publish/RobustCopy.exe.sha256
+    expire_in: never
