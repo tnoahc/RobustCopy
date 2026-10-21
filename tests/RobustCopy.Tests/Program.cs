@@ -12,11 +12,18 @@ var tests = new (string Name, Func<Task> Run)[]
     ("Validator reports option conflicts", TestOptionConflictsAsync),
     ("Option catalog preserves the original category organization", TestOptionCategoriesAsync),
     ("Validator protects GUI-owned advanced flags", TestAdvancedProtectionAsync),
+    ("Validator protects dash-prefixed GUI-owned advanced flags", TestAdvancedDashProtectionAsync),
+    ("Validator rejects switches in file patterns", TestFilePatternSwitchesAsync),
+    ("Validator rejects switches in list options", TestListOptionSwitchesAsync),
+    ("Runner detects dash-prefixed multi-threading", TestDashMultiThreadedAsync),
     ("Output parser reads bytes, paths, percentages, and extras", TestOutputParserAsync),
     ("Exit codes map to Robocopy outcomes", TestExitCodesAsync),
     ("Robocopy scan and copy integration", TestCopyIntegrationAsync),
     ("Robocopy pause and resume integration", TestPauseResumeIntegrationAsync),
     ("Robocopy stop and restart integration", TestStopAndRestartIntegrationAsync),
+    ("Stop during copy startup prevents Robocopy launch", TestStopDuringCopyStartupAsync),
+    ("Stop during scan startup prevents Robocopy launch", TestStopDuringScanStartupAsync),
+    ("Stop right after start leaves no copy running", TestStopImmediatelyAfterStartAsync),
     ("Mirror pre-scan reports planned deletion", TestMirrorScanIntegrationAsync)
 };
 
@@ -142,6 +149,57 @@ static Task TestAdvancedProtectionAsync()
     return Task.CompletedTask;
 }
 
+static Task TestAdvancedDashProtectionAsync()
+{
+    var request = Request(@"C:\Source", @"D:\Destination") with { AdvancedOptions = "-FFT -MIR -purge -LOG:unsafe.txt -MOV" };
+    var errors = CopyJobValidator.Validate(request, requireExistingSource: false);
+    Equal(4, errors.Count(error => error.Contains("managed by the GUI", StringComparison.OrdinalIgnoreCase)));
+    True(errors.Any(error => error.Contains("'/MIR'", StringComparison.Ordinal)), "Expected -MIR to be reported as /MIR.");
+    return Task.CompletedTask;
+}
+
+static Task TestFilePatternSwitchesAsync()
+{
+    foreach (var patterns in new[] { "*.* /MIR", "*.txt -PURGE", "\"/MOVE\"" })
+    {
+        var request = Request(@"C:\Source", @"D:\Destination") with { FilePatterns = patterns };
+        var errors = CopyJobValidator.Validate(request, requireExistingSource: false);
+        True(errors.Any(error => error.Contains("Advanced field", StringComparison.Ordinal)), $"Expected '{patterns}' to be rejected.");
+    }
+
+    var valid = Request(@"C:\Source", @"D:\Destination") with { FilePatterns = "*.txt \"annual report*.pdf\"" };
+    Equal(0, CopyJobValidator.Validate(valid, requireExistingSource: false).Count);
+    return Task.CompletedTask;
+}
+
+static Task TestListOptionSwitchesAsync()
+{
+    foreach (var id in new[] { "ExcludeFiles", "ExcludeDirectories" })
+    {
+        foreach (var value in new[] { "foo.tmp /PURGE", "cache -MIR" })
+        {
+            var request = Request(@"C:\Source", @"D:\Destination", new CopyOptionValue(id, value));
+            var errors = CopyJobValidator.Validate(request, requireExistingSource: false);
+            True(errors.Any(error => error.Contains("Advanced field", StringComparison.Ordinal)), $"Expected {id} '{value}' to be rejected.");
+        }
+
+        var valid = Request(@"C:\Source", @"D:\Destination", new CopyOptionValue(id, "foo.tmp \"build output\""));
+        Equal(0, CopyJobValidator.Validate(valid, requireExistingSource: false).Count);
+    }
+
+    return Task.CompletedTask;
+}
+
+static Task TestDashMultiThreadedAsync()
+{
+    var request = Request(@"C:\Source", @"D:\Destination");
+    True(!RobocopyRunner.IsMultiThreaded(request), "Expected a single-threaded request.");
+    True(RobocopyRunner.IsMultiThreaded(request with { AdvancedOptions = "/MT:8" }), "Expected /MT:8 to be multi-threaded.");
+    True(RobocopyRunner.IsMultiThreaded(request with { AdvancedOptions = "-MT:8" }), "Expected -MT:8 to be multi-threaded.");
+    True(RobocopyRunner.IsMultiThreaded(request with { AdvancedOptions = "-mt" }), "Expected -mt to be multi-threaded.");
+    return Task.CompletedTask;
+}
+
 static Task TestOutputParserAsync()
 {
     var file = RobocopyOutputParser.Parse(@"    New File              10299    C:\Source Folder\pasted-text.txt");
@@ -246,6 +304,93 @@ static async Task TestStopAndRestartIntegrationAsync()
         var restarted = await runner.StartAsync(restartRequest, restartScan);
         True(restarted.Outcome is CopyOutcome.Success or CopyOutcome.SuccessWithWarnings, restarted.Summary);
         True(File.Exists(Path.Combine(fixture.Destination, "restart.bin")), "Expected restarted copy to finish.");
+    });
+}
+
+static async Task TestStopDuringCopyStartupAsync()
+{
+    await WithFixtureAsync(async fixture =>
+    {
+        for (var index = 0; index < 8; index++)
+        {
+            await CreateSizedFileAsync(Path.Combine(fixture.Source, $"startup-{index}.bin"), 4 * 1024 * 1024);
+        }
+
+        await using var runner = new RobocopyRunner(fixture.Logs);
+        var request = DefaultRequest(fixture);
+        var scan = await runner.ScanAsync(request);
+        var outputLines = 0;
+        runner.OutputReceived += (_, _) => Interlocked.Increment(ref outputLines);
+        Task? stopTask = null;
+        runner.ProgressChanged += (_, progress) =>
+        {
+            // Raised synchronously by StartAsync after Stage = Running and before Robocopy is launched.
+            if (stopTask is null && progress.Stage == CopyJobStage.Running)
+            {
+                stopTask = runner.StopAsync();
+            }
+        };
+
+        var result = await runner.StartAsync(request, scan);
+        True(stopTask is not null, "Expected Stop to be requested during startup.");
+        await stopTask!;
+        Equal(CopyOutcome.Canceled, result.Outcome);
+        Equal(CopyJobStage.Canceled, runner.Stage);
+        Equal(0, Volatile.Read(ref outputLines));
+        True(!Directory.EnumerateFileSystemEntries(fixture.Destination).Any(), "Robocopy must not copy anything after Stop.");
+    });
+}
+
+static async Task TestStopDuringScanStartupAsync()
+{
+    await WithFixtureAsync(async fixture =>
+    {
+        await File.WriteAllTextAsync(Path.Combine(fixture.Source, "scan.txt"), "scan");
+        await using var runner = new RobocopyRunner(fixture.Logs);
+        var outputLines = 0;
+        runner.OutputReceived += (_, _) => Interlocked.Increment(ref outputLines);
+        Task? stopTask = null;
+        runner.ProgressChanged += (_, progress) =>
+        {
+            if (stopTask is null && progress.Stage == CopyJobStage.Scanning)
+            {
+                stopTask = runner.StopAsync();
+            }
+        };
+
+        var canceled = false;
+        try
+        {
+            await runner.ScanAsync(DefaultRequest(fixture));
+        }
+        catch (OperationCanceledException)
+        {
+            canceled = true;
+        }
+
+        True(stopTask is not null, "Expected Stop to be requested during startup.");
+        await stopTask!;
+        True(canceled, "Expected the pre-scan to be canceled.");
+        Equal(CopyJobStage.Canceled, runner.Stage);
+        Equal(0, Volatile.Read(ref outputLines));
+    });
+}
+
+static async Task TestStopImmediatelyAfterStartAsync()
+{
+    await WithFixtureAsync(async fixture =>
+    {
+        await CreateSizedFileAsync(Path.Combine(fixture.Source, "large.bin"), 64 * 1024 * 1024);
+        await using var runner = new RobocopyRunner(fixture.Logs);
+        // A full copy takes about 50 seconds, so a Robocopy process that outlives Stop is easy to detect.
+        var request = DefaultRequest(fixture, new CopyOptionValue("InterPacketGap", "50"));
+        var scan = await runner.ScanAsync(request);
+        var copyTask = runner.StartAsync(request, scan);
+        await runner.StopAsync();
+        var finished = await Task.WhenAny(copyTask, Task.Delay(TimeSpan.FromSeconds(10)));
+        True(finished == copyTask, "Robocopy kept running after Stop.");
+        Equal(CopyOutcome.Canceled, (await copyTask).Outcome);
+        Equal(CopyJobStage.Canceled, runner.Stage);
     });
 }
 

@@ -50,4 +50,8 @@ public static class ArgumentTokenizer
 
         return result;
     }
+
+    public static bool IsSwitch(string token) => token.StartsWith('/') || token.StartsWith('-');
+
+    public static string NormalizeSwitch(string token) => token.StartsWith('-') ? "/" + token[1..] : token;
 }
