@@ -165,14 +165,14 @@ public static class CopyJobValidator
 
         foreach (var token in tokens)
         {
-            if (!token.StartsWith('/') && !token.StartsWith('-'))
+            if (!ArgumentTokenizer.IsSwitch(token))
             {
                 errors.Add($"Advanced argument '{token}' must be a self-contained Robocopy switch.");
                 continue;
             }
 
             var separator = token.IndexOf(':');
-            var flag = separator >= 0 ? token[..separator] : token;
+            var flag = ArgumentTokenizer.NormalizeSwitch(separator >= 0 ? token[..separator] : token);
             if (GuiOwnedFlags.Contains(flag))
             {
                 errors.Add($"Advanced argument '{flag}' is managed by the GUI and cannot be overridden.");
@@ -182,13 +182,20 @@ public static class CopyJobValidator
 
     private static void ValidateTokenList(string? text, string label, List<string> errors)
     {
+        IReadOnlyList<string> tokens;
         try
         {
-            _ = ArgumentTokenizer.Parse(text);
+            tokens = ArgumentTokenizer.Parse(text);
         }
         catch (ArgumentException exception)
         {
             errors.Add($"The {label} list is invalid: {exception.Message}");
+            return;
+        }
+
+        foreach (var token in tokens.Where(ArgumentTokenizer.IsSwitch))
+        {
+            errors.Add($"The {label} list cannot contain the switch '{token}'. Enter Robocopy switches in the Advanced field.");
         }
     }
 }
