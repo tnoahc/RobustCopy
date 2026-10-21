@@ -72,6 +72,11 @@ public sealed class RobocopyRunner : IRobocopyRunner
             ProgressChanged?.Invoke(this, new(Stage, 0, 0, "Ready", 0, scan.TotalBytes, 0, null, 0, scan.FileCount));
             return scan;
         }
+        catch (OperationCanceledException) when (_stoppedByUser || cancellationToken.IsCancellationRequested)
+        {
+            Stage = CopyJobStage.Canceled;
+            throw;
+        }
         catch
         {
             if (Stage == CopyJobStage.Scanning)
@@ -197,12 +202,12 @@ public sealed class RobocopyRunner : IRobocopyRunner
                 return;
             }
 
-            _stoppedByUser = true;
             Stage = CopyJobStage.Stopping;
             _suspender?.ResumeAll();
             Process? process;
             lock (_sync)
             {
+                _stoppedByUser = true;
                 process = _currentProcess;
             }
 
@@ -258,6 +263,15 @@ public sealed class RobocopyRunner : IRobocopyRunner
             startInfo.ArgumentList.Add(argument);
         }
 
+        lock (_sync)
+        {
+            if (_stoppedByUser)
+            {
+                throw new OperationCanceledException("The operation was stopped before Robocopy started.");
+            }
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
         using var process = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
         if (!process.Start())
         {
@@ -277,29 +291,23 @@ public sealed class RobocopyRunner : IRobocopyRunner
             await WriteLogAsync($"[Warning] Process containment was unavailable: {exception.Message}{Environment.NewLine}");
         }
 
+        bool stoppedDuringStartup;
         lock (_sync)
         {
             _currentProcess = process;
             _currentJob = job;
+            stoppedDuringStartup = _stoppedByUser;
         }
-
-        using var registration = cancellationToken.Register(() =>
-        {
-            try
-            {
-                if (!process.HasExited)
-                {
-                    process.Kill(entireProcessTree: true);
-                }
-            }
-            catch
-            {
-                // The process may have exited between the check and the kill request.
-            }
-        });
 
         try
         {
+            if (stoppedDuringStartup)
+            {
+                // StopAsync ran before the process was published, so it could not kill it.
+                KillProcessTree(process);
+            }
+
+            using var registration = cancellationToken.Register(() => KillProcessTree(process));
             var outputTask = PumpAsync(process.StandardOutput, onOutput, cancellationToken);
             var errorTask = PumpAsync(process.StandardError, onOutput, cancellationToken);
             await process.WaitForExitAsync(CancellationToken.None);
@@ -317,6 +325,21 @@ public sealed class RobocopyRunner : IRobocopyRunner
             _suspender?.ResumeAll();
             _suspender = null;
             job?.Dispose();
+        }
+    }
+
+    private static void KillProcessTree(Process process)
+    {
+        try
+        {
+            if (!process.HasExited)
+            {
+                process.Kill(entireProcessTree: true);
+            }
+        }
+        catch
+        {
+            // The process may have exited between the check and the kill request.
         }
     }
 
@@ -381,9 +404,11 @@ public sealed class RobocopyRunner : IRobocopyRunner
         }
     }
 
-    private static bool IsMultiThreaded(CopyJobRequest request) =>
+    internal static bool IsMultiThreaded(CopyJobRequest request) =>
         request.Options.Any(option => option.Id.Equals("MultiThreaded", StringComparison.OrdinalIgnoreCase)) ||
-        ArgumentTokenizer.Parse(request.AdvancedOptions).Any(option => option.StartsWith("/MT", StringComparison.OrdinalIgnoreCase));
+        ArgumentTokenizer.Parse(request.AdvancedOptions)
+            .Select(ArgumentTokenizer.NormalizeSwitch)
+            .Any(option => option.StartsWith("/MT", StringComparison.OrdinalIgnoreCase));
 
     private void EnsureIdle()
     {
