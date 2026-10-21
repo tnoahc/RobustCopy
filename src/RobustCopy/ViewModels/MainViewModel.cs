@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Text;
 using System.Windows;
+using System.Windows.Threading;
 using RobustCopy.Core;
 using RobustCopy.Services;
 
@@ -10,11 +11,17 @@ namespace RobustCopy.ViewModels;
 public sealed class MainViewModel : ObservableObject, IAsyncDisposable
 {
     private const int MaximumVisibleLogCharacters = 250_000;
+    private const long UiUpdateIntervalMilliseconds = 100;
     private readonly IRobocopyRunner _runner;
     private readonly IFolderPicker _folderPicker;
     private readonly IUserDialogService _dialogs;
     private readonly IDesktopLauncher _launcher;
     private readonly StringBuilder _visibleLog = new();
+    private readonly object _pendingSync = new();
+    private readonly StringBuilder _pendingLog = new();
+    private CopyJobProgress? _pendingProgress;
+    private bool _uiUpdateScheduled;
+    private long _lastUiUpdate;
     private string _sourcePath = string.Empty;
     private string _destinationPath = string.Empty;
     private string _filePatterns = "*.*";
@@ -55,8 +62,8 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
         ClearPathsCommand = new RelayCommand(ClearPaths, () => !IsBusy);
         SwapCommand = new RelayCommand(SwapPaths, () => !IsBusy);
         StartCommand = new AsyncRelayCommand(StartAsync, () => Stage is CopyJobStage.Idle or CopyJobStage.Completed or CopyJobStage.Failed or CopyJobStage.Canceled, HandleCommandError);
-        PauseCommand = new AsyncRelayCommand(_runner.PauseAsync, () => Stage == CopyJobStage.Running, HandleCommandError);
-        ResumeCommand = new AsyncRelayCommand(_runner.ResumeAsync, () => Stage == CopyJobStage.Paused, HandleCommandError);
+        PauseCommand = new AsyncRelayCommand(() => RunAndApplyAsync(_runner.PauseAsync), () => Stage == CopyJobStage.Running, HandleCommandError);
+        ResumeCommand = new AsyncRelayCommand(() => RunAndApplyAsync(_runner.ResumeAsync), () => Stage == CopyJobStage.Paused, HandleCommandError);
         StopCommand = new AsyncRelayCommand(_runner.StopAsync, () => IsBusy, HandleCommandError);
         CopyCommandCommand = new RelayCommand(() => _launcher.CopyText(CommandPreview), () => !string.IsNullOrWhiteSpace(CommandPreview));
         OpenLogCommand = new RelayCommand(() => _launcher.OpenPath(LastLogPath), () => File.Exists(LastLogPath));
@@ -187,6 +194,7 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
         try
         {
             var scan = await _runner.ScanAsync(request);
+            ApplyPendingUpdates();
             TotalBytes = scan.TotalBytes;
             TotalFiles = scan.FileCount;
             if (CopyJobValidator.IsDestructive(request))
@@ -205,6 +213,7 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
 
             StatusText = scan.FileCount == 0 ? "Checking destination…" : $"Copying {scan.FileCount:N0} file(s)…";
             var result = await _runner.StartAsync(request, scan);
+            ApplyPendingUpdates();
             LastLogPath = result.LogPath;
             Stage = result.Outcome switch
             {
@@ -216,11 +225,13 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
         }
         catch (OperationCanceledException)
         {
+            ApplyPendingUpdates();
             Stage = CopyJobStage.Canceled;
             StatusText = "Operation canceled";
         }
         catch (Exception exception)
         {
+            ApplyPendingUpdates();
             Stage = CopyJobStage.Failed;
             StatusText = "The operation failed";
             _dialogs.ShowError(AppIdentity.DisplayName, exception.Message);
@@ -230,6 +241,12 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
             LastLogPath = _runner.CurrentLogPath;
             RefreshCommands();
         }
+    }
+
+    private async Task RunAndApplyAsync(Func<Task> action)
+    {
+        await action();
+        ApplyPendingUpdates();
     }
 
     private CopyJobRequest BuildRequest() => new(
@@ -313,7 +330,93 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
         CopyCommandCommand?.NotifyCanExecuteChanged();
     }
 
-    private void OnProgressChanged(object? sender, CopyJobProgress progress) => RunOnUiThread(() =>
+    private void OnProgressChanged(object? sender, CopyJobProgress progress)
+    {
+        lock (_pendingSync)
+        {
+            _pendingProgress = progress;
+        }
+
+        ScheduleUiUpdate();
+    }
+
+    private void OnOutputReceived(object? sender, string line)
+    {
+        lock (_pendingSync)
+        {
+            _pendingLog.AppendLine(line);
+            if (_pendingLog.Length > MaximumVisibleLogCharacters)
+            {
+                _pendingLog.Remove(0, _pendingLog.Length - MaximumVisibleLogCharacters);
+            }
+        }
+
+        ScheduleUiUpdate();
+    }
+
+    private void ScheduleUiUpdate()
+    {
+        long delay;
+        lock (_pendingSync)
+        {
+            if (_uiUpdateScheduled)
+            {
+                return;
+            }
+
+            _uiUpdateScheduled = true;
+            delay = Math.Max(0, UiUpdateIntervalMilliseconds - (Environment.TickCount64 - _lastUiUpdate));
+        }
+
+        var dispatcher = Application.Current?.Dispatcher;
+        if (dispatcher is null)
+        {
+            ApplyPendingUpdates();
+            return;
+        }
+
+        _ = Task.Delay(TimeSpan.FromMilliseconds(delay)).ContinueWith(
+            _ => dispatcher.BeginInvoke(DispatcherPriority.Background, ApplyPendingUpdates),
+            TaskScheduler.Default);
+    }
+
+    // Runs on the UI thread. Also called right after runner calls so stage changes and terminal updates are never late or lost.
+    private void ApplyPendingUpdates()
+    {
+        CopyJobProgress? progress;
+        string? log = null;
+        lock (_pendingSync)
+        {
+            progress = _pendingProgress;
+            _pendingProgress = null;
+            if (_pendingLog.Length > 0)
+            {
+                log = _pendingLog.ToString();
+                _pendingLog.Clear();
+            }
+
+            _uiUpdateScheduled = false;
+            _lastUiUpdate = Environment.TickCount64;
+        }
+
+        if (progress is not null)
+        {
+            ApplyProgress(progress);
+        }
+
+        if (log is not null)
+        {
+            _visibleLog.Append(log);
+            if (_visibleLog.Length > MaximumVisibleLogCharacters)
+            {
+                _visibleLog.Remove(0, _visibleLog.Length - MaximumVisibleLogCharacters);
+            }
+
+            LogText = _visibleLog.ToString();
+        }
+    }
+
+    private void ApplyProgress(CopyJobProgress progress)
     {
         Stage = progress.Stage;
         OverallPercent = progress.OverallPercent;
@@ -326,24 +429,6 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
         FilesCompleted = progress.FilesCompleted;
         TotalFiles = progress.TotalFiles;
         IsEstimated = progress.IsEstimated;
-    });
-
-    private void OnOutputReceived(object? sender, string line) => RunOnUiThread(() =>
-    {
-        _visibleLog.AppendLine(line);
-        if (_visibleLog.Length > MaximumVisibleLogCharacters)
-        {
-            _visibleLog.Remove(0, _visibleLog.Length - MaximumVisibleLogCharacters);
-        }
-
-        LogText = _visibleLog.ToString();
-    });
-
-    private static void RunOnUiThread(Action action)
-    {
-        var dispatcher = Application.Current?.Dispatcher;
-        if (dispatcher is null || dispatcher.CheckAccess()) action();
-        else dispatcher.BeginInvoke(action);
     }
 
     private void ResetProgress()

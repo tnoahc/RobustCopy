@@ -18,6 +18,11 @@ public static partial class RobocopyOutputParser
     [GeneratedRegex(@"(?<percent>\d+(?:[\.,]\d+)?)\s*%", RegexOptions.CultureInvariant)]
     private static partial Regex PercentRegex();
 
+    [GeneratedRegex(@"^\s*\d+(?:[\.,]\d+)?\s*%\s*$", RegexOptions.CultureInvariant)]
+    private static partial Regex PercentOnlyRegex();
+
+    public static bool IsPercentOnly(string line) => PercentOnlyRegex().IsMatch(line);
+
     public static RobocopyOutputRecord Parse(string line)
     {
         var fileMatch = FileLineRegex().Match(line);

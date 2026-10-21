@@ -7,7 +7,10 @@ namespace RobustCopy.Services;
 
 public sealed class RobocopyRunner : IRobocopyRunner
 {
+    private static readonly TimeSpan LogFlushInterval = TimeSpan.FromSeconds(1);
+    private static readonly UTF8Encoding LogEncoding = new(false);
     private readonly object _sync = new();
+    private readonly object _outputSync = new();
     private readonly SemaphoreSlim _controlGate = new(1, 1);
     private readonly SemaphoreSlim _logGate = new(1, 1);
     private readonly string _logDirectory;
@@ -15,6 +18,8 @@ public sealed class RobocopyRunner : IRobocopyRunner
     private ProcessJob? _currentJob;
     private ProcessSuspender? _suspender;
     private ProgressTracker? _tracker;
+    private StreamWriter? _logWriter;
+    private Timer? _logFlushTimer;
     private string _logPath = string.Empty;
     private bool _stoppedByUser;
     private bool _disposed;
@@ -47,15 +52,16 @@ public sealed class RobocopyRunner : IRobocopyRunner
         _stoppedByUser = false;
         Stage = CopyJobStage.Scanning;
         ProgressChanged?.Invoke(this, new(Stage, 0, 0, "Scanning source…", 0, 0, 0, null, 0, 0));
-        await WriteLogAsync($"[{DateTimeOffset.Now:O}] Pre-scan{Environment.NewLine}{RobocopyCommandBuilder.BuildDisplayCommand(request, RobocopyExecutionMode.Scan)}{Environment.NewLine}");
 
         var lines = new List<string>();
         try
         {
+            await OpenLogAsync().ConfigureAwait(false);
+            await WriteLogAsync($"[{DateTimeOffset.Now:O}] Pre-scan{Environment.NewLine}{RobocopyCommandBuilder.BuildDisplayCommand(request, RobocopyExecutionMode.Scan)}{Environment.NewLine}").ConfigureAwait(false);
             var exitCode = await RunProcessAsync(
                 RobocopyCommandBuilder.BuildArguments(request, RobocopyExecutionMode.Scan),
                 line => lines.Add(line),
-                cancellationToken);
+                cancellationToken).ConfigureAwait(false);
             if (_stoppedByUser || cancellationToken.IsCancellationRequested)
             {
                 Stage = CopyJobStage.Canceled;
@@ -87,6 +93,10 @@ public sealed class RobocopyRunner : IRobocopyRunner
 
             throw;
         }
+        finally
+        {
+            await CloseLogAsync().ConfigureAwait(false);
+        }
     }
 
     public async Task<CopyJobResult> StartAsync(CopyJobRequest request, ScanResult scan, CancellationToken cancellationToken = default)
@@ -97,10 +107,11 @@ public sealed class RobocopyRunner : IRobocopyRunner
         _tracker = new ProgressTracker(scan, IsMultiThreaded(request));
         Stage = CopyJobStage.Running;
         ProgressChanged?.Invoke(this, new(Stage, 0, 0, "Starting Robocopy…", 0, scan.TotalBytes, 0, null, 0, scan.FileCount, IsMultiThreaded(request)));
-        await WriteLogAsync($"{Environment.NewLine}[{DateTimeOffset.Now:O}] Copy started{Environment.NewLine}{RobocopyCommandBuilder.BuildDisplayCommand(request)}{Environment.NewLine}");
 
         try
         {
+            await OpenLogAsync().ConfigureAwait(false);
+            await WriteLogAsync($"{Environment.NewLine}[{DateTimeOffset.Now:O}] Copy started{Environment.NewLine}{RobocopyCommandBuilder.BuildDisplayCommand(request)}{Environment.NewLine}").ConfigureAwait(false);
             var exitCode = await RunProcessAsync(
                 RobocopyCommandBuilder.BuildArguments(request, RobocopyExecutionMode.Copy),
                 line =>
@@ -110,13 +121,13 @@ public sealed class RobocopyRunner : IRobocopyRunner
                         ProgressChanged?.Invoke(this, tracker.Update(line, Stage));
                     }
                 },
-                cancellationToken);
+                cancellationToken).ConfigureAwait(false);
 
             if (_stoppedByUser || cancellationToken.IsCancellationRequested)
             {
                 Stage = CopyJobStage.Canceled;
                 var canceled = ExitCodeInterpreter.Interpret(exitCode, _logPath, canceled: true);
-                await WriteLogAsync($"[{DateTimeOffset.Now:O}] {canceled.Summary}{Environment.NewLine}");
+                await WriteLogAsync($"[{DateTimeOffset.Now:O}] {canceled.Summary}{Environment.NewLine}").ConfigureAwait(false);
                 return canceled;
             }
 
@@ -127,7 +138,7 @@ public sealed class RobocopyRunner : IRobocopyRunner
                 ProgressChanged?.Invoke(this, completedTracker.Complete(result.Outcome != CopyOutcome.Failure));
             }
 
-            await WriteLogAsync($"[{DateTimeOffset.Now:O}] Exit code {exitCode}: {result.Summary}{Environment.NewLine}");
+            await WriteLogAsync($"[{DateTimeOffset.Now:O}] Exit code {exitCode}: {result.Summary}{Environment.NewLine}").ConfigureAwait(false);
             return result;
         }
         catch (OperationCanceledException) when (_stoppedByUser || cancellationToken.IsCancellationRequested)
@@ -140,11 +151,15 @@ public sealed class RobocopyRunner : IRobocopyRunner
             Stage = CopyJobStage.Failed;
             throw;
         }
+        finally
+        {
+            await CloseLogAsync().ConfigureAwait(false);
+        }
     }
 
     public async Task PauseAsync()
     {
-        await _controlGate.WaitAsync();
+        await _controlGate.WaitAsync().ConfigureAwait(false);
         try
         {
             if (Stage != CopyJobStage.Running || _currentProcess is not { HasExited: false } process)
@@ -157,10 +172,13 @@ public sealed class RobocopyRunner : IRobocopyRunner
             Stage = CopyJobStage.Paused;
             if (_tracker is { } tracker)
             {
-                ProgressChanged?.Invoke(this, tracker.Pause());
+                lock (_outputSync)
+                {
+                    ProgressChanged?.Invoke(this, tracker.Pause());
+                }
             }
 
-            await WriteLogAsync($"[{DateTimeOffset.Now:O}] Copy paused by user.{Environment.NewLine}");
+            await WriteLogAsync($"[{DateTimeOffset.Now:O}] Copy paused by user.{Environment.NewLine}").ConfigureAwait(false);
         }
         finally
         {
@@ -170,7 +188,7 @@ public sealed class RobocopyRunner : IRobocopyRunner
 
     public async Task ResumeAsync()
     {
-        await _controlGate.WaitAsync();
+        await _controlGate.WaitAsync().ConfigureAwait(false);
         try
         {
             if (Stage != CopyJobStage.Paused)
@@ -182,10 +200,13 @@ public sealed class RobocopyRunner : IRobocopyRunner
             Stage = CopyJobStage.Running;
             if (_tracker is { } tracker)
             {
-                ProgressChanged?.Invoke(this, tracker.Resume());
+                lock (_outputSync)
+                {
+                    ProgressChanged?.Invoke(this, tracker.Resume());
+                }
             }
 
-            await WriteLogAsync($"[{DateTimeOffset.Now:O}] Copy resumed by user.{Environment.NewLine}");
+            await WriteLogAsync($"[{DateTimeOffset.Now:O}] Copy resumed by user.{Environment.NewLine}").ConfigureAwait(false);
         }
         finally
         {
@@ -195,7 +216,7 @@ public sealed class RobocopyRunner : IRobocopyRunner
 
     public async Task StopAsync()
     {
-        await _controlGate.WaitAsync();
+        await _controlGate.WaitAsync().ConfigureAwait(false);
         try
         {
             if (!IsBusy)
@@ -222,7 +243,7 @@ public sealed class RobocopyRunner : IRobocopyRunner
                         process.Kill(entireProcessTree: true);
                     }
 
-                    await waitTask;
+                    await waitTask.ConfigureAwait(false);
                 }
                 catch (InvalidOperationException)
                 {
@@ -231,7 +252,7 @@ public sealed class RobocopyRunner : IRobocopyRunner
             }
 
             Stage = CopyJobStage.Canceled;
-            await WriteLogAsync($"[{DateTimeOffset.Now:O}] Operation stopped by user.{Environment.NewLine}");
+            await WriteLogAsync($"[{DateTimeOffset.Now:O}] Operation stopped by user.{Environment.NewLine}").ConfigureAwait(false);
         }
         finally
         {
@@ -288,7 +309,7 @@ public sealed class RobocopyRunner : IRobocopyRunner
         {
             job?.Dispose();
             job = null;
-            await WriteLogAsync($"[Warning] Process containment was unavailable: {exception.Message}{Environment.NewLine}");
+            await WriteLogAsync($"[Warning] Process containment was unavailable: {exception.Message}{Environment.NewLine}").ConfigureAwait(false);
         }
 
         bool stoppedDuringStartup;
@@ -310,8 +331,8 @@ public sealed class RobocopyRunner : IRobocopyRunner
             using var registration = cancellationToken.Register(() => KillProcessTree(process));
             var outputTask = PumpAsync(process.StandardOutput, onOutput, cancellationToken);
             var errorTask = PumpAsync(process.StandardError, onOutput, cancellationToken);
-            await process.WaitForExitAsync(CancellationToken.None);
-            await Task.WhenAll(outputTask, errorTask);
+            await process.WaitForExitAsync(CancellationToken.None).ConfigureAwait(false);
+            await Task.WhenAll(outputTask, errorTask).ConfigureAwait(false);
             return process.ExitCode;
         }
         finally
@@ -349,7 +370,7 @@ public sealed class RobocopyRunner : IRobocopyRunner
         var segment = new StringBuilder();
         while (true)
         {
-            var count = await reader.ReadAsync(buffer.AsMemory(), cancellationToken);
+            var count = await reader.ReadAsync(buffer.AsMemory(), cancellationToken).ConfigureAwait(false);
             if (count == 0)
             {
                 break;
@@ -362,7 +383,7 @@ public sealed class RobocopyRunner : IRobocopyRunner
                 {
                     if (segment.Length > 0)
                     {
-                        await EmitAsync(segment.ToString(), onOutput);
+                        await EmitAsync(segment.ToString(), onOutput).ConfigureAwait(false);
                         segment.Clear();
                     }
                 }
@@ -375,15 +396,86 @@ public sealed class RobocopyRunner : IRobocopyRunner
 
         if (segment.Length > 0)
         {
-            await EmitAsync(segment.ToString(), onOutput);
+            await EmitAsync(segment.ToString(), onOutput).ConfigureAwait(false);
         }
     }
 
     private async Task EmitAsync(string line, Action<string> onOutput)
     {
-        await WriteLogAsync(line + Environment.NewLine);
-        OutputReceived?.Invoke(this, line);
-        onOutput(line);
+        // Percent-only segments drive current-file progress but are noise in the transcript and log view.
+        var percentOnly = RobocopyOutputParser.IsPercentOnly(line);
+        if (!percentOnly)
+        {
+            await WriteLogAsync(line + Environment.NewLine).ConfigureAwait(false);
+        }
+
+        lock (_outputSync)
+        {
+            if (!percentOnly)
+            {
+                OutputReceived?.Invoke(this, line);
+            }
+
+            onOutput(line);
+        }
+    }
+
+    private async Task OpenLogAsync()
+    {
+        await _logGate.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            _logWriter ??= new StreamWriter(
+                new FileStream(_logPath, FileMode.Append, FileAccess.Write, FileShare.Read, 4096, FileOptions.Asynchronous),
+                LogEncoding);
+            _logFlushTimer ??= new Timer(_ => _ = FlushLogAsync(), null, LogFlushInterval, LogFlushInterval);
+        }
+        finally
+        {
+            _logGate.Release();
+        }
+    }
+
+    private async Task FlushLogAsync()
+    {
+        try
+        {
+            await _logGate.WaitAsync().ConfigureAwait(false);
+            try
+            {
+                if (_logWriter is { } writer)
+                {
+                    await writer.FlushAsync().ConfigureAwait(false);
+                }
+            }
+            finally
+            {
+                _logGate.Release();
+            }
+        }
+        catch (Exception exception) when (exception is IOException or ObjectDisposedException)
+        {
+            // The next periodic flush or closing the log retries the write.
+        }
+    }
+
+    private async Task CloseLogAsync()
+    {
+        await _logGate.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            _logFlushTimer?.Dispose();
+            _logFlushTimer = null;
+            if (_logWriter is { } writer)
+            {
+                _logWriter = null;
+                await writer.DisposeAsync().ConfigureAwait(false);
+            }
+        }
+        finally
+        {
+            _logGate.Release();
+        }
     }
 
     private async Task WriteLogAsync(string text)
@@ -393,10 +485,17 @@ public sealed class RobocopyRunner : IRobocopyRunner
             return;
         }
 
-        await _logGate.WaitAsync();
+        await _logGate.WaitAsync().ConfigureAwait(false);
         try
         {
-            await File.AppendAllTextAsync(_logPath, text, new UTF8Encoding(false));
+            if (_logWriter is { } writer)
+            {
+                await writer.WriteAsync(text).ConfigureAwait(false);
+            }
+            else
+            {
+                await File.AppendAllTextAsync(_logPath, text, LogEncoding).ConfigureAwait(false);
+            }
         }
         finally
         {
@@ -427,7 +526,8 @@ public sealed class RobocopyRunner : IRobocopyRunner
             return;
         }
 
-        await StopAsync();
+        await StopAsync().ConfigureAwait(false);
+        await CloseLogAsync().ConfigureAwait(false);
         _disposed = true;
         _controlGate.Dispose();
         _logGate.Dispose();
