@@ -17,7 +17,10 @@ var tests = new (string Name, Func<Task> Run)[]
     ("Robocopy scan and copy integration", TestCopyIntegrationAsync),
     ("Robocopy pause and resume integration", TestPauseResumeIntegrationAsync),
     ("Robocopy stop and restart integration", TestStopAndRestartIntegrationAsync),
-    ("Mirror pre-scan reports planned deletion", TestMirrorScanIntegrationAsync)
+    ("Mirror pre-scan reports planned deletion", TestMirrorScanIntegrationAsync),
+    ("Runner exposes the pre-scan transcript path", TestScanLogPathIntegrationAsync),
+    ("Failed pre-scan still exposes its transcript", TestFailedScanLogPathAsync),
+    ("Declined confirmation still exposes its transcript", TestDeclinedConfirmationLogPathAsync)
 };
 
 var failures = 0;
@@ -262,6 +265,81 @@ static async Task TestMirrorScanIntegrationAsync()
     });
 }
 
+static async Task TestScanLogPathIntegrationAsync()
+{
+    await WithFixtureAsync(async fixture =>
+    {
+        await File.WriteAllTextAsync(Path.Combine(fixture.Source, "scan.txt"), "scan");
+        await using var runner = new RobocopyRunner(fixture.Logs);
+        Equal(string.Empty, runner.CurrentLogPath);
+        await runner.ScanAsync(DefaultRequest(fixture));
+        True(File.Exists(runner.CurrentLogPath), "Expected the pre-scan transcript to exist after the scan.");
+        True(runner.CurrentLogPath.StartsWith(fixture.Logs, StringComparison.OrdinalIgnoreCase), "Expected the transcript in the runner log directory.");
+    });
+}
+
+static async Task TestFailedScanLogPathAsync()
+{
+    await WithFixtureAsync(async fixture =>
+    {
+        var runner = new FakeRobocopyRunner(Path.Combine(fixture.Root, "failed-scan.log"), failScan: true);
+        var dialogs = new FakeDialogs(confirm: true);
+        await using var viewModel = CreateViewModel(fixture, runner, dialogs);
+        var openLogChanged = 0;
+        viewModel.OpenLogCommand.CanExecuteChanged += (_, _) => openLogChanged++;
+
+        await ExecuteStartAsync(viewModel);
+
+        Equal(CopyJobStage.Failed, viewModel.Stage);
+        Equal(runner.CurrentLogPath, viewModel.LastLogPath);
+        True(viewModel.OpenLogCommand.CanExecute(null), "Open log should be enabled after a failed pre-scan.");
+        True(viewModel.CopyLogCommand.CanExecute(null), "Copy log should be enabled after a failed pre-scan.");
+        True(openLogChanged > 0, "Expected the Open log command to be refreshed.");
+        Equal(1, dialogs.Errors);
+        Equal(0, runner.StartCalls);
+    });
+}
+
+static async Task TestDeclinedConfirmationLogPathAsync()
+{
+    await WithFixtureAsync(async fixture =>
+    {
+        var runner = new FakeRobocopyRunner(Path.Combine(fixture.Root, "declined.log"), failScan: false);
+        var dialogs = new FakeDialogs(confirm: false);
+        await using var viewModel = CreateViewModel(fixture, runner, dialogs);
+        viewModel.Options.First(option => option.Id == "Purge").IsSelected = true;
+
+        await ExecuteStartAsync(viewModel);
+
+        Equal(CopyJobStage.Canceled, viewModel.Stage);
+        Equal(1, dialogs.Confirmations);
+        Equal(runner.CurrentLogPath, viewModel.LastLogPath);
+        True(viewModel.OpenLogCommand.CanExecute(null), "Open log should be enabled after declining confirmation.");
+        True(viewModel.CopyLogCommand.CanExecute(null), "Copy log should be enabled after declining confirmation.");
+        Equal(0, runner.StartCalls);
+    });
+}
+
+static MainViewModel CreateViewModel(TestFixture fixture, IRobocopyRunner runner, IUserDialogService dialogs) =>
+    new(runner, new FakeFolderPicker(), dialogs, new FakeLauncher())
+    {
+        SourcePath = fixture.Source,
+        DestinationPath = fixture.Destination
+    };
+
+static async Task ExecuteStartAsync(MainViewModel viewModel)
+{
+    True(viewModel.StartCommand.CanExecute(null), "Expected Start to be enabled.");
+    viewModel.StartCommand.Execute(null);
+    var deadline = DateTime.UtcNow.AddSeconds(5);
+    while (!viewModel.StartCommand.CanExecute(null) && DateTime.UtcNow < deadline)
+    {
+        await Task.Delay(25);
+    }
+
+    True(viewModel.StartCommand.CanExecute(null), "Expected Start to finish.");
+}
+
 static CopyJobRequest DefaultRequest(TestFixture fixture, params CopyOptionValue[] extra)
 {
     var values = new List<CopyOptionValue>
@@ -325,3 +403,68 @@ static void Equal<T>(T expected, T actual)
 }
 
 internal sealed record TestFixture(string Root, string Source, string Destination, string Logs);
+
+internal sealed class FakeRobocopyRunner(string logPath, bool failScan) : IRobocopyRunner
+{
+    public event EventHandler<CopyJobProgress>? ProgressChanged;
+    public event EventHandler<string>? OutputReceived;
+
+    public CopyJobStage Stage { get; private set; } = CopyJobStage.Idle;
+    public bool IsBusy => Stage is CopyJobStage.Scanning or CopyJobStage.Running or CopyJobStage.Paused or CopyJobStage.Stopping;
+    public string CurrentLogPath { get; private set; } = string.Empty;
+    public int StartCalls { get; private set; }
+
+    public async Task<ScanResult> ScanAsync(CopyJobRequest request, CancellationToken cancellationToken = default)
+    {
+        CurrentLogPath = logPath;
+        await File.WriteAllTextAsync(logPath, "pre-scan transcript", cancellationToken);
+        OutputReceived?.Invoke(this, "pre-scan transcript");
+        if (failScan)
+        {
+            Stage = CopyJobStage.Failed;
+            throw new InvalidOperationException($"Robocopy pre-scan failed with exit code 16. Review {logPath}.");
+        }
+
+        Stage = CopyJobStage.Idle;
+        ProgressChanged?.Invoke(this, new(Stage, 0, 0, "Ready", 0, 10, 0, null, 0, 1));
+        return new ScanResult(10, 1, 1, []);
+    }
+
+    public Task<CopyJobResult> StartAsync(CopyJobRequest request, ScanResult scan, CancellationToken cancellationToken = default)
+    {
+        StartCalls++;
+        Stage = CopyJobStage.Completed;
+        return Task.FromResult(ExitCodeInterpreter.Interpret(1, CurrentLogPath));
+    }
+
+    public Task PauseAsync() => Task.CompletedTask;
+    public Task ResumeAsync() => Task.CompletedTask;
+    public Task StopAsync() => Task.CompletedTask;
+    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+}
+
+internal sealed class FakeDialogs(bool confirm) : IUserDialogService
+{
+    public int Errors { get; private set; }
+    public int Confirmations { get; private set; }
+
+    public void ShowError(string title, string message) => Errors++;
+    public void ShowInformation(string title, string message) { }
+
+    public bool ConfirmDestructive(string destination, int plannedDeletes, bool movesSourceItems)
+    {
+        Confirmations++;
+        return confirm;
+    }
+}
+
+internal sealed class FakeFolderPicker : IFolderPicker
+{
+    public string? PickFolder(string title, string initialFolder) => null;
+}
+
+internal sealed class FakeLauncher : IDesktopLauncher
+{
+    public void OpenPath(string path) { }
+    public void CopyText(string text) { }
+}

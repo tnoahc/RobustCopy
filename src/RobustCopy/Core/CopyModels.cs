@@ -61,6 +61,7 @@ public interface IRobocopyRunner : IAsyncDisposable
 
     CopyJobStage Stage { get; }
     bool IsBusy { get; }
+    string CurrentLogPath { get; }
 
     Task<ScanResult> ScanAsync(CopyJobRequest request, CancellationToken cancellationToken = default);
     Task<CopyJobResult> StartAsync(CopyJobRequest request, ScanResult scan, CancellationToken cancellationToken = default);

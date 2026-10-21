@@ -30,11 +30,13 @@ public sealed class RobocopyRunner : IRobocopyRunner
 
     public CopyJobStage Stage { get; private set; } = CopyJobStage.Idle;
     public bool IsBusy => Stage is CopyJobStage.Scanning or CopyJobStage.Running or CopyJobStage.Paused or CopyJobStage.Stopping;
+    public string CurrentLogPath => _logPath;
 
     public async Task<ScanResult> ScanAsync(CopyJobRequest request, CancellationToken cancellationToken = default)
     {
         ThrowIfDisposed();
         EnsureIdle();
+        _logPath = string.Empty;
         var errors = CopyJobValidator.Validate(request);
         if (errors.Count > 0)
         {
