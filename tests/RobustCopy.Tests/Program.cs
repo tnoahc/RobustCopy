@@ -12,6 +12,9 @@ var tests = new (string Name, Func<Task> Run)[]
     ("Command preview quotes paths so they round-trip", TestDisplayCommandQuotingAsync),
     ("Validator blocks overlapping paths", TestOverlappingPathsAsync),
     ("Validator reports option conflicts", TestOptionConflictsAsync),
+    ("Option conflicts reference known ids and are symmetric", TestOptionConflictSymmetryAsync),
+    ("Validator accepts valid low free-space floors", TestLowFreeSpaceValidValuesAsync),
+    ("Validator rejects invalid low free-space floors", TestLowFreeSpaceInvalidValuesAsync),
     ("Option catalog preserves the original category organization", TestOptionCategoriesAsync),
     ("Validator protects GUI-owned advanced flags", TestAdvancedProtectionAsync),
     ("Validator protects dash-prefixed GUI-owned advanced flags", TestAdvancedDashProtectionAsync),
@@ -190,6 +193,42 @@ static Task TestOptionConflictsAsync()
     var request = Request(@"C:\Source", @"D:\Destination", new("Subdirectories"), new("EmptySubdirectories"));
     var errors = CopyJobValidator.Validate(request, requireExistingSource: false);
     True(errors.Any(error => error.Contains("cannot be combined", StringComparison.OrdinalIgnoreCase)), "Expected conflict error.");
+    return Task.CompletedTask;
+}
+
+static Task TestOptionConflictSymmetryAsync()
+{
+    var definitions = RobocopyOptionCatalog.All.ToDictionary(definition => definition.Id, StringComparer.OrdinalIgnoreCase);
+    foreach (var definition in RobocopyOptionCatalog.All)
+    {
+        foreach (var conflict in definition.ConflictsWith)
+        {
+            True(definitions.TryGetValue(conflict, out var other), $"'{definition.Id}' conflicts with unknown option '{conflict}'.");
+            True(!conflict.Equals(definition.Id, StringComparison.OrdinalIgnoreCase), $"'{definition.Id}' must not conflict with itself.");
+            True(other!.ConflictsWith.Contains(definition.Id, StringComparer.OrdinalIgnoreCase),
+                $"'{definition.Id}' conflicts with '{conflict}', but '{conflict}' does not list '{definition.Id}'.");
+        }
+    }
+    return Task.CompletedTask;
+}
+
+static Task TestLowFreeSpaceValidValuesAsync()
+{
+    foreach (var value in new[] { "", " ", "0", "100", "2G", "2g", "512M", "512m", "10K", "007M", "18446744073709551615" })
+    {
+        var errors = CopyJobValidator.Validate(Request(@"C:\Source", @"D:\Destination", new CopyOptionValue("LowFreeSpace", value)), requireExistingSource: false);
+        True(errors.Count == 0, $"Expected /LFSM value '{value}' to be valid, found: {string.Join(" | ", errors)}");
+    }
+    return Task.CompletedTask;
+}
+
+static Task TestLowFreeSpaceInvalidValuesAsync()
+{
+    foreach (var value in new[] { "1.5G", "1.5", ".5G", "2.G", "1,5G", "2GB", "2T", "abc", "-1G", " 2G", "2 G", "18446744073709551616", "١٢G" })
+    {
+        var errors = CopyJobValidator.Validate(Request(@"C:\Source", @"D:\Destination", new CopyOptionValue("LowFreeSpace", value)), requireExistingSource: false);
+        True(errors.Any(error => error.Contains("Low free-space floor", StringComparison.Ordinal)), $"Expected /LFSM value '{value}' to be rejected.");
+    }
     return Task.CompletedTask;
 }
 
