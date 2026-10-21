@@ -226,6 +226,7 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
         }
         finally
         {
+            LastLogPath = _runner.CurrentLogPath;
             RefreshCommands();
         }
     }
