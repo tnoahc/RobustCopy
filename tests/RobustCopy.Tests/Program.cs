@@ -12,6 +12,10 @@ var tests = new (string Name, Func<Task> Run)[]
     ("Validator reports option conflicts", TestOptionConflictsAsync),
     ("Option catalog preserves the original category organization", TestOptionCategoriesAsync),
     ("Validator protects GUI-owned advanced flags", TestAdvancedProtectionAsync),
+    ("Validator protects dash-prefixed GUI-owned advanced flags", TestAdvancedDashProtectionAsync),
+    ("Validator rejects switches in file patterns", TestFilePatternSwitchesAsync),
+    ("Validator rejects switches in list options", TestListOptionSwitchesAsync),
+    ("Runner detects dash-prefixed multi-threading", TestDashMultiThreadedAsync),
     ("Output parser reads bytes, paths, percentages, and extras", TestOutputParserAsync),
     ("Exit codes map to Robocopy outcomes", TestExitCodesAsync),
     ("Robocopy scan and copy integration", TestCopyIntegrationAsync),
@@ -139,6 +143,57 @@ static Task TestAdvancedProtectionAsync()
     var request = Request(@"C:\Source", @"D:\Destination") with { AdvancedOptions = "/FFT /LOG:unsafe.txt /MIR" };
     var errors = CopyJobValidator.Validate(request, requireExistingSource: false);
     True(errors.Count(error => error.Contains("managed by the GUI", StringComparison.OrdinalIgnoreCase)) == 2, "Expected /LOG and /MIR to be protected.");
+    return Task.CompletedTask;
+}
+
+static Task TestAdvancedDashProtectionAsync()
+{
+    var request = Request(@"C:\Source", @"D:\Destination") with { AdvancedOptions = "-FFT -MIR -purge -LOG:unsafe.txt -MOV" };
+    var errors = CopyJobValidator.Validate(request, requireExistingSource: false);
+    Equal(4, errors.Count(error => error.Contains("managed by the GUI", StringComparison.OrdinalIgnoreCase)));
+    True(errors.Any(error => error.Contains("'/MIR'", StringComparison.Ordinal)), "Expected -MIR to be reported as /MIR.");
+    return Task.CompletedTask;
+}
+
+static Task TestFilePatternSwitchesAsync()
+{
+    foreach (var patterns in new[] { "*.* /MIR", "*.txt -PURGE", "\"/MOVE\"" })
+    {
+        var request = Request(@"C:\Source", @"D:\Destination") with { FilePatterns = patterns };
+        var errors = CopyJobValidator.Validate(request, requireExistingSource: false);
+        True(errors.Any(error => error.Contains("Advanced field", StringComparison.Ordinal)), $"Expected '{patterns}' to be rejected.");
+    }
+
+    var valid = Request(@"C:\Source", @"D:\Destination") with { FilePatterns = "*.txt \"annual report*.pdf\"" };
+    Equal(0, CopyJobValidator.Validate(valid, requireExistingSource: false).Count);
+    return Task.CompletedTask;
+}
+
+static Task TestListOptionSwitchesAsync()
+{
+    foreach (var id in new[] { "ExcludeFiles", "ExcludeDirectories" })
+    {
+        foreach (var value in new[] { "foo.tmp /PURGE", "cache -MIR" })
+        {
+            var request = Request(@"C:\Source", @"D:\Destination", new CopyOptionValue(id, value));
+            var errors = CopyJobValidator.Validate(request, requireExistingSource: false);
+            True(errors.Any(error => error.Contains("Advanced field", StringComparison.Ordinal)), $"Expected {id} '{value}' to be rejected.");
+        }
+
+        var valid = Request(@"C:\Source", @"D:\Destination", new CopyOptionValue(id, "foo.tmp \"build output\""));
+        Equal(0, CopyJobValidator.Validate(valid, requireExistingSource: false).Count);
+    }
+
+    return Task.CompletedTask;
+}
+
+static Task TestDashMultiThreadedAsync()
+{
+    var request = Request(@"C:\Source", @"D:\Destination");
+    True(!RobocopyRunner.IsMultiThreaded(request), "Expected a single-threaded request.");
+    True(RobocopyRunner.IsMultiThreaded(request with { AdvancedOptions = "/MT:8" }), "Expected /MT:8 to be multi-threaded.");
+    True(RobocopyRunner.IsMultiThreaded(request with { AdvancedOptions = "-MT:8" }), "Expected -MT:8 to be multi-threaded.");
+    True(RobocopyRunner.IsMultiThreaded(request with { AdvancedOptions = "-mt" }), "Expected -mt to be multi-threaded.");
     return Task.CompletedTask;
 }
 
