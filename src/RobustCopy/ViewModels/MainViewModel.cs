@@ -191,7 +191,10 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
             if (CopyJobValidator.IsDestructive(request))
             {
                 var moves = request.Options.Any(option => option.Id is "MoveFiles" or "MoveTree");
-                if (!_dialogs.ConfirmDestructive(request.DestinationPath, scan.PlannedDeleteCount, moves))
+                // Robocopy lists *EXTRA items in /L mode regardless of switches; only /MIR and /PURGE delete them.
+                var purges = request.Options.Any(option => option.Id is "Mirror" or "Purge");
+                var plannedDeletes = purges ? scan.PlannedDeleteCount : 0;
+                if (!_dialogs.ConfirmDestructive(request.DestinationPath, plannedDeletes, moves))
                 {
                     Stage = CopyJobStage.Canceled;
                     StatusText = "Copy canceled before any changes were made";
