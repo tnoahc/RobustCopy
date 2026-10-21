@@ -1,9 +1,10 @@
 using System.Globalization;
 using System.IO;
+using System.Text.RegularExpressions;
 
 namespace RobustCopy.Core;
 
-public static class CopyJobValidator
+public static partial class CopyJobValidator
 {
     private static readonly HashSet<string> GuiOwnedFlags = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -11,6 +12,9 @@ public static class CopyJobValidator
         "/UNICODE", "/NP", "/ETA", "/JOB", "/SAVE", "/QUIT", "/NOSD", "/NODD", "/IF",
         "/MIR", "/PURGE", "/MOV", "/MOVE"
     };
+
+    [GeneratedRegex(@"^(?<number>[0-9]+)[KMG]?$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    private static partial Regex FreeSpaceFloorRegex();
 
     public static IReadOnlyList<string> Validate(CopyJobRequest request, bool requireExistingSource = true)
     {
@@ -144,10 +148,21 @@ public static class CopyJobValidator
         {
             errors.Add("Directory metadata can only contain D, A, T, E, and X.");
         }
+        else if (definition.Id == "LowFreeSpace" && !IsValidFreeSpaceFloor(value))
+        {
+            errors.Add("Low free-space floor must be a whole number, optionally followed by K, M, or G.");
+        }
         else if (definition.ValueKind == OptionValueKind.List)
         {
             ValidateTokenList(value, definition.Label, errors);
         }
+    }
+
+    private static bool IsValidFreeSpaceFloor(string value)
+    {
+        // Robocopy accepts /LFSM:n[KMG] where n is an unsigned 64-bit integer; decimals are rejected.
+        var match = FreeSpaceFloorRegex().Match(value);
+        return match.Success && ulong.TryParse(match.Groups["number"].Value, NumberStyles.None, CultureInfo.InvariantCulture, out _);
     }
 
     private static void ValidateAdvancedOptions(string text, List<string> errors)
