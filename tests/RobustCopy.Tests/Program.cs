@@ -6,6 +6,7 @@ var tests = new (string Name, Func<Task> Run)[]
 {
     ("Application identity uses RobustCopy", TestAppIdentityAsync),
     ("Legacy application logs migrate to RobustCopy", TestLegacyLogMigrationAsync),
+    ("Crash reporter writes a best-effort crash log", TestCrashReporterAsync),
     ("Argument tokenizer preserves quoted values", TestTokenizerAsync),
     ("Command builder keeps paths as individual arguments", TestCommandBuilderAsync),
     ("Command preview quotes paths so they round-trip", TestDisplayCommandQuotingAsync),
@@ -80,6 +81,27 @@ static Task TestLegacyLogMigrationAsync() => WithFixtureAsync(fixture =>
     Equal(Path.Combine(fixture.Root, AppIdentity.LocalDataFolderName, "Logs"), migratedDirectory);
     Equal("legacy transcript", File.ReadAllText(Path.Combine(migratedDirectory, "robocopy-legacy.log")));
     True(File.Exists(legacyLog), "Legacy logs should be copied without deleting the originals.");
+    return Task.CompletedTask;
+});
+
+static Task TestCrashReporterAsync() => WithFixtureAsync(fixture =>
+{
+    var exception = new InvalidOperationException("crash-report-marker");
+    var reportPath = CrashReporter.Write(exception, "Test", fixture.Logs);
+
+    True(reportPath is not null, "Expected the crash report to be written.");
+    Equal(fixture.Logs, Path.GetDirectoryName(reportPath));
+    var fileName = Path.GetFileName(reportPath!);
+    True(
+        fileName.StartsWith("crash-", StringComparison.Ordinal) && fileName.EndsWith(".log", StringComparison.Ordinal),
+        $"Unexpected crash report name '{fileName}'.");
+    var report = File.ReadAllText(reportPath!);
+    True(report.Contains(exception.ToString(), StringComparison.Ordinal), "Expected the report to contain the exception text.");
+    True(report.Contains("Time (UTC):", StringComparison.Ordinal), "Expected the report to contain a UTC timestamp.");
+    True(report.Contains("Version:", StringComparison.Ordinal), "Expected the report to contain the application version.");
+
+    // Reporting is best-effort: an unusable directory yields null instead of throwing.
+    Equal<string?>(null, CrashReporter.Write(exception, "Test", "invalid\0directory"));
     return Task.CompletedTask;
 });
 
