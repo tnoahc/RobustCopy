@@ -8,6 +8,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ("Legacy application logs migrate to RobustCopy", TestLegacyLogMigrationAsync),
     ("Argument tokenizer preserves quoted values", TestTokenizerAsync),
     ("Command builder keeps paths as individual arguments", TestCommandBuilderAsync),
+    ("Command preview quotes paths so they round-trip", TestDisplayCommandQuotingAsync),
     ("Validator blocks overlapping paths", TestOverlappingPathsAsync),
     ("Validator reports option conflicts", TestOptionConflictsAsync),
     ("Option catalog preserves the original category organization", TestOptionCategoriesAsync),
@@ -98,6 +99,55 @@ static Task TestCommandBuilderAsync()
     True(arguments.Contains("/BYTES"), "Expected GUI-owned byte output.");
     True(!arguments.Any(argument => argument.Contains('"')), "ArgumentList values must not contain shell quotes.");
     return Task.CompletedTask;
+}
+
+static Task TestDisplayCommandQuotingAsync()
+{
+    (string Source, string Destination, string Expected)[] cases =
+    [
+        (@"D:\My Backups\", @"D:\", @"robocopy.exe ""D:\My Backups\\"" D:\ *.* "),
+        (@"C:\Source", @"D:\Destination", @"robocopy.exe C:\Source D:\Destination *.* "),
+        (@"C:\Odd""Name", @"C:\Odd\""Name\", @"robocopy.exe ""C:\Odd\""Name"" ""C:\Odd\\\""Name\\"" *.* ")
+    ];
+
+    foreach (var (source, destination, expected) in cases)
+    {
+        var command = RobocopyCommandBuilder.BuildDisplayCommand(Request(source, destination));
+        True(command.StartsWith(expected, StringComparison.Ordinal), $"Expected '{expected}...', found '{command}'.");
+
+        var parsed = SplitCommandLine(command);
+        Equal(source, parsed[1]);
+        Equal(destination, parsed[2]);
+    }
+
+    return Task.CompletedTask;
+}
+
+static string[] SplitCommandLine(string commandLine)
+{
+    var argv = CommandLineToArgvW(commandLine, out var count);
+    if (argv == IntPtr.Zero) throw new InvalidOperationException("CommandLineToArgvW failed.");
+    try
+    {
+        var result = new string[count];
+        for (var index = 0; index < count; index++)
+        {
+            result[index] = System.Runtime.InteropServices.Marshal.PtrToStringUni(
+                System.Runtime.InteropServices.Marshal.ReadIntPtr(argv, index * IntPtr.Size))!;
+        }
+
+        return result;
+    }
+    finally
+    {
+        LocalFree(argv);
+    }
+
+    [System.Runtime.InteropServices.DllImport("shell32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode, SetLastError = true)]
+    static extern IntPtr CommandLineToArgvW(string commandLine, out int count);
+
+    [System.Runtime.InteropServices.DllImport("kernel32.dll")]
+    static extern IntPtr LocalFree(IntPtr memory);
 }
 
 static Task TestOverlappingPathsAsync()
