@@ -10,24 +10,49 @@ The interface design references are kept in [`docs/mockups`](docs/mockups/README
 
 ## Download
 
-The current release is **RobustCopy 1.0.1**, published by **Kaleb Creative Studio** for Windows 10 and Windows 11 x64.
+The current release is **RobustCopy 1.0.2**, published by **Kaleb Creative Studio** for Windows 10 and Windows 11 x64.
 
-- [Download RobustCopy.exe](https://github.com/tnoahc/RobustCopy/releases/download/v1.0.1/RobustCopy.exe)
-- [View the GitHub release](https://github.com/tnoahc/RobustCopy/releases/tag/v1.0.1)
+- [Download RobustCopy.exe](https://github.com/tnoahc/RobustCopy/releases/download/v1.0.2/RobustCopy.exe)
+- [Download the SHA-256 checksum](https://github.com/tnoahc/RobustCopy/releases/download/v1.0.2/RobustCopy.exe.sha256)
+- [View the GitHub release](https://github.com/tnoahc/RobustCopy/releases/tag/v1.0.2)
 - [Browse the GitHub repository](https://github.com/tnoahc/RobustCopy)
 - [Read the privacy policy](PRIVACY.md)
 
-The 62.1 MB executable is self-contained; no separate .NET installation is required. Its SHA-256 checksum is:
+The 62.1 MB executable is self-contained; no separate .NET installation is required. Each release publishes its SHA-256 checksum as `RobustCopy.exe.sha256` next to the executable. To verify a download, compare it with:
 
-```text
-2EDDA6466782A6576782ABA3ACB70147188FF5094CCF4D91795AC526427F208B  RobustCopy.exe
+```powershell
+Get-FileHash .\RobustCopy.exe -Algorithm SHA256
 ```
+
+### What's new in 1.0.2
+
+**Safety**
+
+- Destructive switches (`/MIR`, `/PURGE`, `/MOV`, `/MOVE`) can no longer bypass the confirmation prompt when typed with a `-` prefix, in the file-pattern field, or in the exclude lists.
+- Pressing Stop while a job is starting now reliably prevents Robocopy from launching.
+- A Robocopy process that is terminated unexpectedly is reported as a failure instead of a success.
+- Move-only jobs no longer claim that destination items will be deleted.
+
+**Reliability**
+
+- Unexpected errors write a crash report to the log folder instead of closing the app silently.
+- File names with non-ASCII characters are decoded with the system OEM code page, so they display correctly.
+- Copy log works with very large and still-running transcripts (the last 5 MB is copied).
+- Open log and Copy log are available after a failed or declined pre-scan.
+- Low free-space mode values are checked before a run starts.
+- Copied command previews keep paths that end in a backslash intact.
+
+**Performance and usability**
+
+- Transcripts no longer contain a line for every progress percentage, and the live view updates smoothly during large transfers.
+- Selecting an option now turns off options it conflicts with instead of being blocked; for example, Mirror is selectable straight away.
+- Logs older than 90 days are removed automatically at startup.
 
 ## Features
 
 - Choose local, mapped-drive, and UNC source/destination folders through the Windows folder picker.
 - Swap source and destination in one click.
-- Select Robocopy switches from categorized, two-column strategy cards with descriptions and automatic conflict handling.
+- Select Robocopy switches from categorized, two-column strategy cards with descriptions; selecting an option turns off any option it conflicts with.
 - Enter additional supported switches in the Advanced field.
 - Preview the exact command while configuring a job.
 - Pre-scan safely with `/L` for planned files, bytes, and destination deletions.
@@ -36,9 +61,10 @@ The 62.1 MB executable is self-contained; no separate .NET installation is requi
 - Require confirmation for Mirror, Purge, and Move modes.
 - Save UTF-8 run transcripts under `%LocalAppData%\RobustCopy\Logs`; logs older than 90 days are removed automatically at startup.
 - Preserve logs from earlier installations by copying them into the RobustCopy log directory on first use.
+- Write a crash report to the log directory if the app hits an unexpected error.
 - Run Robocopy without `cmd.exe`; paths and switches are passed through `ProcessStartInfo.ArgumentList`.
 
-Robocopy console output is decoded using the active Windows OEM code page and then written as UTF-8. The GUI reserves `/UNICODE` because the installed Robocopy build emits a mixed BOM/console stream for that switch when stdout is redirected, which cannot be parsed reliably for live progress.
+Robocopy console output is decoded using the system OEM code page (the one Robocopy writes in, which follows the Windows system locale) and then written as UTF-8. The GUI reserves `/UNICODE` because the installed Robocopy build emits a mixed BOM/console stream for that switch when stdout is redirected, which cannot be parsed reliably for live progress.
 
 ## Interface
 
