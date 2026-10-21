@@ -8,10 +8,15 @@ var tests = new (string Name, Func<Task> Run)[]
     ("Legacy application logs migrate to RobustCopy", TestLegacyLogMigrationAsync),
     ("Argument tokenizer preserves quoted values", TestTokenizerAsync),
     ("Command builder keeps paths as individual arguments", TestCommandBuilderAsync),
+    ("Command preview quotes paths so they round-trip", TestDisplayCommandQuotingAsync),
     ("Validator blocks overlapping paths", TestOverlappingPathsAsync),
     ("Validator reports option conflicts", TestOptionConflictsAsync),
     ("Option catalog preserves the original category organization", TestOptionCategoriesAsync),
     ("Validator protects GUI-owned advanced flags", TestAdvancedProtectionAsync),
+    ("Validator protects dash-prefixed GUI-owned advanced flags", TestAdvancedDashProtectionAsync),
+    ("Validator rejects switches in file patterns", TestFilePatternSwitchesAsync),
+    ("Validator rejects switches in list options", TestListOptionSwitchesAsync),
+    ("Runner detects dash-prefixed multi-threading", TestDashMultiThreadedAsync),
     ("Output parser reads bytes, paths, percentages, and extras", TestOutputParserAsync),
     ("Exit codes map to Robocopy outcomes", TestExitCodesAsync),
     ("Log tail returns a small log whole", TestLogTailSmallFileAsync),
@@ -20,7 +25,11 @@ var tests = new (string Name, Func<Task> Run)[]
     ("Robocopy scan and copy integration", TestCopyIntegrationAsync),
     ("Robocopy pause and resume integration", TestPauseResumeIntegrationAsync),
     ("Robocopy stop and restart integration", TestStopAndRestartIntegrationAsync),
-    ("Mirror pre-scan reports planned deletion", TestMirrorScanIntegrationAsync)
+    ("Stop during copy startup prevents Robocopy launch", TestStopDuringCopyStartupAsync),
+    ("Stop during scan startup prevents Robocopy launch", TestStopDuringScanStartupAsync),
+    ("Stop right after start leaves no copy running", TestStopImmediatelyAfterStartAsync),
+    ("Mirror pre-scan reports planned deletion", TestMirrorScanIntegrationAsync),
+    ("Robocopy output decodes non-ASCII names with the system OEM code page", TestOemFileNameIntegrationAsync)
 };
 
 var failures = 0;
@@ -96,6 +105,55 @@ static Task TestCommandBuilderAsync()
     return Task.CompletedTask;
 }
 
+static Task TestDisplayCommandQuotingAsync()
+{
+    (string Source, string Destination, string Expected)[] cases =
+    [
+        (@"D:\My Backups\", @"D:\", @"robocopy.exe ""D:\My Backups\\"" D:\ *.* "),
+        (@"C:\Source", @"D:\Destination", @"robocopy.exe C:\Source D:\Destination *.* "),
+        (@"C:\Odd""Name", @"C:\Odd\""Name\", @"robocopy.exe ""C:\Odd\""Name"" ""C:\Odd\\\""Name\\"" *.* ")
+    ];
+
+    foreach (var (source, destination, expected) in cases)
+    {
+        var command = RobocopyCommandBuilder.BuildDisplayCommand(Request(source, destination));
+        True(command.StartsWith(expected, StringComparison.Ordinal), $"Expected '{expected}...', found '{command}'.");
+
+        var parsed = SplitCommandLine(command);
+        Equal(source, parsed[1]);
+        Equal(destination, parsed[2]);
+    }
+
+    return Task.CompletedTask;
+}
+
+static string[] SplitCommandLine(string commandLine)
+{
+    var argv = CommandLineToArgvW(commandLine, out var count);
+    if (argv == IntPtr.Zero) throw new InvalidOperationException("CommandLineToArgvW failed.");
+    try
+    {
+        var result = new string[count];
+        for (var index = 0; index < count; index++)
+        {
+            result[index] = System.Runtime.InteropServices.Marshal.PtrToStringUni(
+                System.Runtime.InteropServices.Marshal.ReadIntPtr(argv, index * IntPtr.Size))!;
+        }
+
+        return result;
+    }
+    finally
+    {
+        LocalFree(argv);
+    }
+
+    [System.Runtime.InteropServices.DllImport("shell32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode, SetLastError = true)]
+    static extern IntPtr CommandLineToArgvW(string commandLine, out int count);
+
+    [System.Runtime.InteropServices.DllImport("kernel32.dll")]
+    static extern IntPtr LocalFree(IntPtr memory);
+}
+
 static Task TestOverlappingPathsAsync()
 {
     var request = Request(@"C:\Data", @"C:\Data\Backup");
@@ -145,6 +203,57 @@ static Task TestAdvancedProtectionAsync()
     return Task.CompletedTask;
 }
 
+static Task TestAdvancedDashProtectionAsync()
+{
+    var request = Request(@"C:\Source", @"D:\Destination") with { AdvancedOptions = "-FFT -MIR -purge -LOG:unsafe.txt -MOV" };
+    var errors = CopyJobValidator.Validate(request, requireExistingSource: false);
+    Equal(4, errors.Count(error => error.Contains("managed by the GUI", StringComparison.OrdinalIgnoreCase)));
+    True(errors.Any(error => error.Contains("'/MIR'", StringComparison.Ordinal)), "Expected -MIR to be reported as /MIR.");
+    return Task.CompletedTask;
+}
+
+static Task TestFilePatternSwitchesAsync()
+{
+    foreach (var patterns in new[] { "*.* /MIR", "*.txt -PURGE", "\"/MOVE\"" })
+    {
+        var request = Request(@"C:\Source", @"D:\Destination") with { FilePatterns = patterns };
+        var errors = CopyJobValidator.Validate(request, requireExistingSource: false);
+        True(errors.Any(error => error.Contains("Advanced field", StringComparison.Ordinal)), $"Expected '{patterns}' to be rejected.");
+    }
+
+    var valid = Request(@"C:\Source", @"D:\Destination") with { FilePatterns = "*.txt \"annual report*.pdf\"" };
+    Equal(0, CopyJobValidator.Validate(valid, requireExistingSource: false).Count);
+    return Task.CompletedTask;
+}
+
+static Task TestListOptionSwitchesAsync()
+{
+    foreach (var id in new[] { "ExcludeFiles", "ExcludeDirectories" })
+    {
+        foreach (var value in new[] { "foo.tmp /PURGE", "cache -MIR" })
+        {
+            var request = Request(@"C:\Source", @"D:\Destination", new CopyOptionValue(id, value));
+            var errors = CopyJobValidator.Validate(request, requireExistingSource: false);
+            True(errors.Any(error => error.Contains("Advanced field", StringComparison.Ordinal)), $"Expected {id} '{value}' to be rejected.");
+        }
+
+        var valid = Request(@"C:\Source", @"D:\Destination", new CopyOptionValue(id, "foo.tmp \"build output\""));
+        Equal(0, CopyJobValidator.Validate(valid, requireExistingSource: false).Count);
+    }
+
+    return Task.CompletedTask;
+}
+
+static Task TestDashMultiThreadedAsync()
+{
+    var request = Request(@"C:\Source", @"D:\Destination");
+    True(!RobocopyRunner.IsMultiThreaded(request), "Expected a single-threaded request.");
+    True(RobocopyRunner.IsMultiThreaded(request with { AdvancedOptions = "/MT:8" }), "Expected /MT:8 to be multi-threaded.");
+    True(RobocopyRunner.IsMultiThreaded(request with { AdvancedOptions = "-MT:8" }), "Expected -MT:8 to be multi-threaded.");
+    True(RobocopyRunner.IsMultiThreaded(request with { AdvancedOptions = "-mt" }), "Expected -mt to be multi-threaded.");
+    return Task.CompletedTask;
+}
+
 static Task TestOutputParserAsync()
 {
     var file = RobocopyOutputParser.Parse(@"    New File              10299    C:\Source Folder\pasted-text.txt");
@@ -177,6 +286,12 @@ static Task TestExitCodesAsync()
     foreach (var failureCode in new[] { 8, 9, 16 })
     {
         Equal(CopyOutcome.Failure, ExitCodeInterpreter.Interpret(failureCode, "log").Outcome);
+    }
+    foreach (var abnormalCode in new[] { -1, -2, int.MinValue })
+    {
+        var abnormal = ExitCodeInterpreter.Interpret(abnormalCode, "log");
+        Equal(CopyOutcome.Failure, abnormal.Outcome);
+        Equal($"Robocopy terminated unexpectedly (exit code {abnormalCode}).", abnormal.Summary);
     }
     Equal(CopyOutcome.Canceled, ExitCodeInterpreter.Interpret(-1, "log", true).Outcome);
     return Task.CompletedTask;
@@ -302,6 +417,93 @@ static async Task TestStopAndRestartIntegrationAsync()
     });
 }
 
+static async Task TestStopDuringCopyStartupAsync()
+{
+    await WithFixtureAsync(async fixture =>
+    {
+        for (var index = 0; index < 8; index++)
+        {
+            await CreateSizedFileAsync(Path.Combine(fixture.Source, $"startup-{index}.bin"), 4 * 1024 * 1024);
+        }
+
+        await using var runner = new RobocopyRunner(fixture.Logs);
+        var request = DefaultRequest(fixture);
+        var scan = await runner.ScanAsync(request);
+        var outputLines = 0;
+        runner.OutputReceived += (_, _) => Interlocked.Increment(ref outputLines);
+        Task? stopTask = null;
+        runner.ProgressChanged += (_, progress) =>
+        {
+            // Raised synchronously by StartAsync after Stage = Running and before Robocopy is launched.
+            if (stopTask is null && progress.Stage == CopyJobStage.Running)
+            {
+                stopTask = runner.StopAsync();
+            }
+        };
+
+        var result = await runner.StartAsync(request, scan);
+        True(stopTask is not null, "Expected Stop to be requested during startup.");
+        await stopTask!;
+        Equal(CopyOutcome.Canceled, result.Outcome);
+        Equal(CopyJobStage.Canceled, runner.Stage);
+        Equal(0, Volatile.Read(ref outputLines));
+        True(!Directory.EnumerateFileSystemEntries(fixture.Destination).Any(), "Robocopy must not copy anything after Stop.");
+    });
+}
+
+static async Task TestStopDuringScanStartupAsync()
+{
+    await WithFixtureAsync(async fixture =>
+    {
+        await File.WriteAllTextAsync(Path.Combine(fixture.Source, "scan.txt"), "scan");
+        await using var runner = new RobocopyRunner(fixture.Logs);
+        var outputLines = 0;
+        runner.OutputReceived += (_, _) => Interlocked.Increment(ref outputLines);
+        Task? stopTask = null;
+        runner.ProgressChanged += (_, progress) =>
+        {
+            if (stopTask is null && progress.Stage == CopyJobStage.Scanning)
+            {
+                stopTask = runner.StopAsync();
+            }
+        };
+
+        var canceled = false;
+        try
+        {
+            await runner.ScanAsync(DefaultRequest(fixture));
+        }
+        catch (OperationCanceledException)
+        {
+            canceled = true;
+        }
+
+        True(stopTask is not null, "Expected Stop to be requested during startup.");
+        await stopTask!;
+        True(canceled, "Expected the pre-scan to be canceled.");
+        Equal(CopyJobStage.Canceled, runner.Stage);
+        Equal(0, Volatile.Read(ref outputLines));
+    });
+}
+
+static async Task TestStopImmediatelyAfterStartAsync()
+{
+    await WithFixtureAsync(async fixture =>
+    {
+        await CreateSizedFileAsync(Path.Combine(fixture.Source, "large.bin"), 64 * 1024 * 1024);
+        await using var runner = new RobocopyRunner(fixture.Logs);
+        // A full copy takes about 50 seconds, so a Robocopy process that outlives Stop is easy to detect.
+        var request = DefaultRequest(fixture, new CopyOptionValue("InterPacketGap", "50"));
+        var scan = await runner.ScanAsync(request);
+        var copyTask = runner.StartAsync(request, scan);
+        await runner.StopAsync();
+        var finished = await Task.WhenAny(copyTask, Task.Delay(TimeSpan.FromSeconds(10)));
+        True(finished == copyTask, "Robocopy kept running after Stop.");
+        Equal(CopyOutcome.Canceled, (await copyTask).Outcome);
+        Equal(CopyJobStage.Canceled, runner.Stage);
+    });
+}
+
 static async Task TestMirrorScanIntegrationAsync()
 {
     await WithFixtureAsync(async fixture =>
@@ -318,6 +520,51 @@ static async Task TestMirrorScanIntegrationAsync()
         var scan = await runner.ScanAsync(request);
         True(scan.PlannedDeleteCount >= 1, $"Expected the mirror dry run to find the extra destination file. Output: {string.Join(" | ", output)}");
         True(File.Exists(Path.Combine(fixture.Destination, "extra.txt")), "A dry run must not delete anything.");
+    });
+}
+
+static async Task TestOemFileNameIntegrationAsync()
+{
+    // Robocopy writes redirected output in the system OEM code page (GetOEMCP), so a name is only
+    // expected to survive the round trip when that code page can represent it.
+    System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
+    var systemOem = System.Text.Encoding.GetEncoding(
+        (int)NativeMethods.GetOEMCP(),
+        System.Text.EncoderFallback.ExceptionFallback,
+        System.Text.DecoderFallback.ExceptionFallback);
+    var fileName = new[] { "café.txt", "naïve.txt", "Ünïcödé.txt" }.FirstOrDefault(name =>
+    {
+        try
+        {
+            return systemOem.GetString(systemOem.GetBytes(name)) == name;
+        }
+        catch (System.Text.EncoderFallbackException)
+        {
+            return false;
+        }
+    });
+    if (fileName is null)
+    {
+        Console.WriteLine($"      (skipped: system OEM code page {systemOem.CodePage} cannot represent the sample names)");
+        return;
+    }
+
+    await WithFixtureAsync(async fixture =>
+    {
+        await File.WriteAllTextAsync(Path.Combine(fixture.Source, fileName), "oem");
+        await using var runner = new RobocopyRunner(fixture.Logs);
+        var output = new List<string>();
+        runner.OutputReceived += (_, line) => output.Add(line);
+        var request = DefaultRequest(fixture);
+        var scan = await runner.ScanAsync(request);
+        True(scan.FileCount == 1, $"Expected one scan file, found {scan.FileCount}. Output: {string.Join(" | ", output)}");
+        var result = await runner.StartAsync(request, scan);
+        True(result.Outcome is CopyOutcome.Success or CopyOutcome.SuccessWithWarnings, result.Summary);
+        True(File.Exists(Path.Combine(fixture.Destination, fileName)), $"Expected {fileName} to be copied.");
+        True(output.Any(line => line.Contains(fileName, StringComparison.Ordinal)),
+            $"Expected Robocopy output to contain '{fileName}' (system OEM code page {systemOem.CodePage}). Output: {string.Join(" | ", output)}");
+        var transcript = await File.ReadAllTextAsync(result.LogPath);
+        True(transcript.Contains(fileName, StringComparison.Ordinal), $"Expected the transcript to contain '{fileName}'.");
     });
 }
 
@@ -384,3 +631,9 @@ static void Equal<T>(T expected, T actual)
 }
 
 internal sealed record TestFixture(string Root, string Source, string Destination, string Logs);
+
+internal static class NativeMethods
+{
+    [System.Runtime.InteropServices.DllImport("kernel32.dll")]
+    internal static extern uint GetOEMCP();
+}
