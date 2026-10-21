@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Text;
 using Microsoft.Win32.SafeHandles;
 
 namespace RobustCopy.Services;
@@ -192,5 +193,28 @@ internal sealed class ProcessSuspender
         [DllImport("kernel32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         internal static extern bool CloseHandle(IntPtr handle);
+    }
+}
+
+/// <summary>
+/// Robocopy writes redirected output in the system OEM code page, which follows the system locale
+/// rather than the user's regional format.
+/// </summary>
+internal static class SystemOemEncoding
+{
+    private static readonly Lazy<Encoding> LazyInstance = new(Create);
+
+    public static Encoding Instance => LazyInstance.Value;
+
+    private static Encoding Create()
+    {
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+        return Encoding.GetEncoding((int)NativeMethods.GetOEMCP());
+    }
+
+    private static class NativeMethods
+    {
+        [DllImport("kernel32.dll")]
+        internal static extern uint GetOEMCP();
     }
 }

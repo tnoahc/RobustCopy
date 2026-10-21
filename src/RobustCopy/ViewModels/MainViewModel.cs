@@ -191,7 +191,10 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
             if (CopyJobValidator.IsDestructive(request))
             {
                 var moves = request.Options.Any(option => option.Id is "MoveFiles" or "MoveTree");
-                if (!_dialogs.ConfirmDestructive(request.DestinationPath, scan.PlannedDeleteCount, moves))
+                // Robocopy lists *EXTRA items in /L mode regardless of switches; only /MIR and /PURGE delete them.
+                var purges = request.Options.Any(option => option.Id is "Mirror" or "Purge");
+                var plannedDeletes = purges ? scan.PlannedDeleteCount : 0;
+                if (!_dialogs.ConfirmDestructive(request.DestinationPath, plannedDeletes, moves))
                 {
                     Stage = CopyJobStage.Canceled;
                     StatusText = "Copy canceled before any changes were made";
@@ -337,8 +340,18 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
 
     private void CopyLog()
     {
-        _launcher.CopyText(File.ReadAllText(LastLogPath));
-        _dialogs.ShowInformation("Log copied", "The complete Robocopy transcript is on the clipboard.");
+        try
+        {
+            var tail = LogTailReader.Read(LastLogPath);
+            _launcher.CopyText(tail.Text);
+            _dialogs.ShowInformation("Log copied", tail.IsTruncated
+                ? $"The transcript is {LogTailReader.FormatMegabytes(tail.FileBytes)}, so only the last {LogTailReader.FormatMegabytes(tail.MaximumBytes)} is on the clipboard. Open the log for the full transcript."
+                : "The complete Robocopy transcript is on the clipboard.");
+        }
+        catch (Exception exception)
+        {
+            _dialogs.ShowError("Could not copy the log", exception.Message);
+        }
     }
 
     private void OpenLogsFolder()
