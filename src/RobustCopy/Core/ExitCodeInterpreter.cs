@@ -9,6 +9,11 @@ public static class ExitCodeInterpreter
             return new(exitCode, CopyOutcome.Canceled, "The copy was stopped by the user.", logPath);
         }
 
+        if (exitCode < 0)
+        {
+            return new(exitCode, CopyOutcome.Failure, $"Robocopy terminated unexpectedly (exit code {exitCode}).", logPath);
+        }
+
         if (exitCode >= 8)
         {
             return new(exitCode, CopyOutcome.Failure, "Robocopy reported one or more copy failures.", logPath);
