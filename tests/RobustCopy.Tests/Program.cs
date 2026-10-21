@@ -13,8 +13,11 @@ var tests = new (string Name, Func<Task> Run)[]
     ("Option catalog preserves the original category organization", TestOptionCategoriesAsync),
     ("Validator protects GUI-owned advanced flags", TestAdvancedProtectionAsync),
     ("Output parser reads bytes, paths, percentages, and extras", TestOutputParserAsync),
+    ("Output parser recognizes percent-only segments", TestPercentOnlyAsync),
     ("Exit codes map to Robocopy outcomes", TestExitCodesAsync),
     ("Robocopy scan and copy integration", TestCopyIntegrationAsync),
+    ("Transcript and output omit percent-only segments", TestPercentSegmentsOmittedAsync),
+    ("Transcript is readable and flushed during a run", TestLogReadableDuringRunAsync),
     ("Robocopy pause and resume integration", TestPauseResumeIntegrationAsync),
     ("Robocopy stop and restart integration", TestStopAndRestartIntegrationAsync),
     ("Mirror pre-scan reports planned deletion", TestMirrorScanIntegrationAsync)
@@ -161,6 +164,75 @@ static Task TestOutputParserAsync()
     Equal(1, scan.FileCount);
     Equal(2, scan.PlannedDeleteCount);
     return Task.CompletedTask;
+}
+
+static Task TestPercentOnlyAsync()
+{
+    foreach (var line in new[] { "  12.5%", "100%", "0%", "\t  7,5 % ", "  0.0%  " })
+    {
+        True(RobocopyOutputParser.IsPercentOnly(line), $"Expected '{line}' to be percent-only.");
+    }
+
+    foreach (var line in new[] { "", "   ", "%", "  12.5", @"    New File   10299    C:\Data\50%.txt", "  Speed : 12 %  done", "12.5% 13%" })
+    {
+        True(!RobocopyOutputParser.IsPercentOnly(line), $"Expected '{line}' not to be percent-only.");
+    }
+
+    return Task.CompletedTask;
+}
+
+static async Task TestPercentSegmentsOmittedAsync()
+{
+    await WithFixtureAsync(async fixture =>
+    {
+        await CreateSizedFileAsync(Path.Combine(fixture.Source, "progress.bin"), 32 * 1024 * 1024);
+        await using var runner = new RobocopyRunner(fixture.Logs);
+        var output = new List<string>();
+        var currentPercents = new List<double>();
+        runner.OutputReceived += (_, line) => output.Add(line);
+        runner.ProgressChanged += (_, progress) => currentPercents.Add(progress.CurrentFilePercent);
+        var request = DefaultRequest(fixture);
+        var scan = await runner.ScanAsync(request);
+        var result = await runner.StartAsync(request, scan);
+        True(result.Outcome is CopyOutcome.Success or CopyOutcome.SuccessWithWarnings, result.Summary);
+
+        var transcript = await File.ReadAllLinesAsync(result.LogPath);
+        True(transcript.Any(line => line.Contains("progress.bin", StringComparison.OrdinalIgnoreCase)), "Expected the file line in the transcript.");
+        True(transcript.Any(line => line.Contains("Exit code", StringComparison.Ordinal)), "Expected the exit summary in the transcript.");
+        True(!transcript.Any(RobocopyOutputParser.IsPercentOnly), "Percent-only segments must not reach the transcript.");
+        True(!output.Any(RobocopyOutputParser.IsPercentOnly), "Percent-only segments must not raise OutputReceived.");
+        True(currentPercents.Any(percent => percent is > 0 and < 100), "Percent segments must still drive current-file progress.");
+        Equal(100d, currentPercents[^1]);
+    });
+}
+
+static async Task TestLogReadableDuringRunAsync()
+{
+    await WithFixtureAsync(async fixture =>
+    {
+        await CreateSizedFileAsync(Path.Combine(fixture.Source, "readable.bin"), 16 * 1024 * 1024);
+        await using var runner = new RobocopyRunner(fixture.Logs);
+        var request = DefaultRequest(fixture, new CopyOptionValue("InterPacketGap", "30"));
+        var scan = await runner.ScanAsync(request);
+        var copyTask = runner.StartAsync(request, scan);
+        await WaitForStageAsync(runner, CopyJobStage.Running, copyTask);
+        await runner.PauseAsync();
+        var logPath = Directory.GetFiles(fixture.Logs, "*.log").Single();
+        var transcript = string.Empty;
+        var deadline = DateTime.UtcNow.AddSeconds(5);
+        while (!transcript.Contains("Copy paused by user.", StringComparison.Ordinal) && DateTime.UtcNow < deadline)
+        {
+            await Task.Delay(100);
+            using var reader = new StreamReader(new FileStream(logPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite));
+            transcript = await reader.ReadToEndAsync();
+        }
+
+        True(transcript.Contains("Copy started", StringComparison.Ordinal), "Expected the copy header while the run is active.");
+        True(transcript.Contains("Copy paused by user.", StringComparison.Ordinal), "Expected the pause line to be flushed while the run is active.");
+        await runner.StopAsync();
+        Equal(CopyOutcome.Canceled, (await copyTask).Outcome);
+        True((await File.ReadAllTextAsync(logPath)).Contains("Operation stopped by user.", StringComparison.Ordinal), "Expected the stop line after the run.");
+    });
 }
 
 static Task TestExitCodesAsync()
