@@ -40,14 +40,14 @@ public partial class MainWindow : Window
     {
         if (_allowClose)
         {
-            await _viewModel.DisposeAsync();
+            await DisposeViewModelAsync();
             return;
         }
 
         if (!_viewModel.IsBusy)
         {
             _allowClose = true;
-            await _viewModel.DisposeAsync();
+            await DisposeViewModelAsync();
             return;
         }
 
@@ -65,9 +65,30 @@ public partial class MainWindow : Window
 
         e.Cancel = true;
         IsEnabled = false;
-        await _viewModel.StopForShutdownAsync();
-        await _viewModel.DisposeAsync();
+        try
+        {
+            await _viewModel.StopForShutdownAsync();
+        }
+        catch (Exception exception)
+        {
+            // Closing must always complete, even if the active job could not be stopped cleanly.
+            CrashReporter.Write(exception, "Stopping the active job during shutdown");
+        }
+
+        await DisposeViewModelAsync();
         _allowClose = true;
         Close();
+    }
+
+    private async Task DisposeViewModelAsync()
+    {
+        try
+        {
+            await _viewModel.DisposeAsync();
+        }
+        catch (Exception exception)
+        {
+            CrashReporter.Write(exception, "Disposing the main view model during shutdown");
+        }
     }
 }

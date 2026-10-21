@@ -42,6 +42,7 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
     private int _filesCompleted;
     private int _totalFiles;
     private bool _isEstimated;
+    private bool _isResolvingConflicts;
 
     public MainViewModel(
         IRobocopyRunner runner,
@@ -71,7 +72,7 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
 
         _runner.ProgressChanged += OnProgressChanged;
         _runner.OutputReceived += OnOutputReceived;
-        RefreshOptionAvailability();
+        RefreshConflictMessages();
         RefreshPreview();
     }
 
@@ -199,7 +200,10 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
             if (CopyJobValidator.IsDestructive(request))
             {
                 var moves = request.Options.Any(option => option.Id is "MoveFiles" or "MoveTree");
-                if (!_dialogs.ConfirmDestructive(request.DestinationPath, scan.PlannedDeleteCount, moves))
+                // Robocopy lists *EXTRA items in /L mode regardless of switches; only /MIR and /PURGE delete them.
+                var purges = request.Options.Any(option => option.Id is "Mirror" or "Purge");
+                var plannedDeletes = purges ? scan.PlannedDeleteCount : 0;
+                if (!_dialogs.ConfirmDestructive(request.DestinationPath, plannedDeletes, moves))
                 {
                     Stage = CopyJobStage.Canceled;
                     StatusText = "Copy canceled before any changes were made";
@@ -234,6 +238,7 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
         }
         finally
         {
+            LastLogPath = _runner.CurrentLogPath;
             RefreshCommands();
         }
     }
@@ -269,23 +274,44 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
 
     private void OnOptionChanged(OptionItemViewModel changed)
     {
-        RefreshOptionAvailability();
+        if (_isResolvingConflicts) return;
+
+        if (changed.IsSelected)
+        {
+            _isResolvingConflicts = true;
+            try
+            {
+                foreach (var option in Options.Where(option => option.IsSelected && Conflicts(option, changed)).ToArray())
+                {
+                    option.IsSelected = false;
+                }
+            }
+            finally
+            {
+                _isResolvingConflicts = false;
+            }
+        }
+
+        RefreshConflictMessages();
         RefreshPreview();
     }
 
-    private void RefreshOptionAvailability()
+    private void RefreshConflictMessages()
     {
         var selected = Options.Where(option => option.IsSelected).ToArray();
         foreach (var option in Options)
         {
-            var blocker = selected.FirstOrDefault(candidate =>
-                candidate != option &&
-                (candidate.Definition.ConflictsWith.Contains(option.Id, StringComparer.OrdinalIgnoreCase) ||
-                 option.Definition.ConflictsWith.Contains(candidate.Id, StringComparer.OrdinalIgnoreCase)));
-            option.IsAvailable = option.IsSelected || blocker is null;
-            option.ConflictMessage = blocker is null ? string.Empty : $"Unavailable while “{blocker.Label}” is selected.";
+            var turnsOff = option.IsSelected
+                ? []
+                : selected.Where(candidate => Conflicts(candidate, option)).Select(candidate => $"“{candidate.Label}”").ToArray();
+            option.ConflictMessage = turnsOff.Length == 0 ? string.Empty : $"Selecting this turns off {string.Join(", ", turnsOff)}.";
         }
     }
+
+    private static bool Conflicts(OptionItemViewModel left, OptionItemViewModel right) =>
+        left != right &&
+        (left.Definition.ConflictsWith.Contains(right.Id, StringComparer.OrdinalIgnoreCase) ||
+         right.Definition.ConflictsWith.Contains(left.Id, StringComparer.OrdinalIgnoreCase));
 
     private void RefreshPreview()
     {
@@ -421,8 +447,18 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
 
     private void CopyLog()
     {
-        _launcher.CopyText(File.ReadAllText(LastLogPath));
-        _dialogs.ShowInformation("Log copied", "The complete Robocopy transcript is on the clipboard.");
+        try
+        {
+            var tail = LogTailReader.Read(LastLogPath);
+            _launcher.CopyText(tail.Text);
+            _dialogs.ShowInformation("Log copied", tail.IsTruncated
+                ? $"The transcript is {LogTailReader.FormatMegabytes(tail.FileBytes)}, so only the last {LogTailReader.FormatMegabytes(tail.MaximumBytes)} is on the clipboard. Open the log for the full transcript."
+                : "The complete Robocopy transcript is on the clipboard.");
+        }
+        catch (Exception exception)
+        {
+            _dialogs.ShowError("Could not copy the log", exception.Message);
+        }
     }
 
     private void OpenLogsFolder()
