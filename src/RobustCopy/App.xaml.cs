@@ -14,6 +14,9 @@ public partial class App : Application
         AppDomain.CurrentDomain.UnhandledException += OnDomainUnhandledException;
         TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
         base.OnStartup(e);
+
+        // Retention runs once per launch, off the UI thread, and never throws.
+        _ = Task.Run(() => AppIdentity.PruneOldLogs(AppIdentity.LogDirectory, DateTime.UtcNow));
     }
 
     protected override void OnExit(ExitEventArgs e)
