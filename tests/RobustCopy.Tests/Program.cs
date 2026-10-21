@@ -19,6 +19,9 @@ var tests = new (string Name, Func<Task> Run)[]
     ("Runner detects dash-prefixed multi-threading", TestDashMultiThreadedAsync),
     ("Output parser reads bytes, paths, percentages, and extras", TestOutputParserAsync),
     ("Exit codes map to Robocopy outcomes", TestExitCodesAsync),
+    ("Log tail returns a small log whole", TestLogTailSmallFileAsync),
+    ("Log tail truncates a large log at a line boundary", TestLogTailLargeFileAsync),
+    ("Log tail reads a log that is open for writing", TestLogTailOpenForWritingAsync),
     ("Robocopy scan and copy integration", TestCopyIntegrationAsync),
     ("Robocopy pause and resume integration", TestPauseResumeIntegrationAsync),
     ("Robocopy stop and restart integration", TestStopAndRestartIntegrationAsync),
@@ -293,6 +296,62 @@ static Task TestExitCodesAsync()
     Equal(CopyOutcome.Canceled, ExitCodeInterpreter.Interpret(-1, "log", true).Outcome);
     return Task.CompletedTask;
 }
+
+static Task TestLogTailSmallFileAsync() => WithFixtureAsync(fixture =>
+{
+    var path = Path.Combine(fixture.Root, "small.log");
+    var content = "first line\r\nsecond line — ünïcode\r\n";
+    File.WriteAllText(path, content, new System.Text.UTF8Encoding(false));
+
+    var tail = LogTailReader.Read(path);
+    True(!tail.IsTruncated, "A small log must not be truncated.");
+    Equal(content, tail.Text);
+    return Task.CompletedTask;
+});
+
+static Task TestLogTailLargeFileAsync() => WithFixtureAsync(fixture =>
+{
+    var path = Path.Combine(fixture.Root, "large.log");
+    var builder = new System.Text.StringBuilder();
+    var lineNumber = 0;
+    while (builder.Length < 6 * 1024 * 1024)
+    {
+        builder.Append($"line {++lineNumber:D7} é漢字🙂\r\n");
+    }
+    var content = builder.ToString();
+    File.WriteAllText(path, content, new System.Text.UTF8Encoding(false));
+    var fileBytes = new FileInfo(path).Length;
+
+    var tail = LogTailReader.Read(path);
+    True(tail.IsTruncated, "A log over 5 MB must be truncated.");
+    Equal(fileBytes, tail.FileBytes);
+    var headerEnd = tail.Text.IndexOf(Environment.NewLine, StringComparison.Ordinal);
+    var header = tail.Text[..headerEnd];
+    var body = tail.Text[(headerEnd + Environment.NewLine.Length)..];
+    True(header.StartsWith("[Truncated: showing the last 5 MB of ", StringComparison.Ordinal), $"Unexpected header: {header}");
+    True(header.EndsWith("Open the log for the full transcript.]", StringComparison.Ordinal), $"Unexpected header: {header}");
+    True(body.StartsWith("line ", StringComparison.Ordinal), "The tail must start at a line boundary.");
+    True(!body.Contains('�'), "The tail must not split a multibyte character.");
+    True(content.EndsWith(body, StringComparison.Ordinal), "The tail must be the end of the log.");
+    True(System.Text.Encoding.UTF8.GetByteCount(body) <= LogTailReader.DefaultMaximumBytes, "The tail must fit in 5 MB.");
+    return Task.CompletedTask;
+});
+
+static Task TestLogTailOpenForWritingAsync() => WithFixtureAsync(fixture =>
+{
+    var path = Path.Combine(fixture.Root, "open.log");
+    using (var writer = new StreamWriter(new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.Read), new System.Text.UTF8Encoding(false)))
+    {
+        writer.Write("still being written\r\n");
+        writer.Flush();
+
+        var tail = LogTailReader.Read(path);
+        Equal("still being written\r\n", tail.Text);
+        True(!tail.IsTruncated, "A small open log must not be truncated.");
+    }
+
+    return Task.CompletedTask;
+});
 
 static async Task TestCopyIntegrationAsync()
 {
