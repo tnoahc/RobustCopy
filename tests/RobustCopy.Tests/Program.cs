@@ -17,7 +17,8 @@ var tests = new (string Name, Func<Task> Run)[]
     ("Robocopy scan and copy integration", TestCopyIntegrationAsync),
     ("Robocopy pause and resume integration", TestPauseResumeIntegrationAsync),
     ("Robocopy stop and restart integration", TestStopAndRestartIntegrationAsync),
-    ("Mirror pre-scan reports planned deletion", TestMirrorScanIntegrationAsync)
+    ("Mirror pre-scan reports planned deletion", TestMirrorScanIntegrationAsync),
+    ("Destructive confirmation reports deletions only for mirror or purge", TestDestructiveConfirmationAsync)
 };
 
 var failures = 0;
@@ -262,6 +263,50 @@ static async Task TestMirrorScanIntegrationAsync()
     });
 }
 
+static Task TestDestructiveConfirmationAsync() => WithFixtureAsync(async fixture =>
+{
+    var cases = new (string[] Options, int ExpectedDeletes, bool ExpectedMoves)[]
+    {
+        (["MoveFiles"], 0, true),
+        (["MoveTree"], 0, true),
+        (["Mirror"], 3, false),
+        (["Purge"], 3, false),
+        (["Purge", "MoveFiles"], 3, true)
+    };
+
+    foreach (var testCase in cases)
+    {
+        var dialogs = new FakeDialogs();
+        await using var viewModel = new MainViewModel(new FakeRunner(plannedDeletes: 3), new FakeFolderPicker(), dialogs, new FakeLauncher())
+        {
+            SourcePath = fixture.Source,
+            DestinationPath = fixture.Destination
+        };
+        foreach (var option in viewModel.Options)
+        {
+            option.IsSelected = testCase.Options.Contains(option.Id);
+        }
+
+        viewModel.StartCommand.Execute(null);
+        await WaitUntilAsync(() => viewModel.Stage == CopyJobStage.Canceled);
+        var label = string.Join("+", testCase.Options);
+        True(dialogs.Confirmations.Count == 1, $"{label}: expected one confirmation, found {dialogs.Confirmations.Count}. Errors: {string.Join(" | ", dialogs.Errors)}");
+        True(dialogs.Confirmations[0].PlannedDeletes == testCase.ExpectedDeletes, $"{label}: expected {testCase.ExpectedDeletes} planned deletes, found {dialogs.Confirmations[0].PlannedDeletes}.");
+        True(dialogs.Confirmations[0].MovesSourceItems == testCase.ExpectedMoves, $"{label}: expected moves={testCase.ExpectedMoves}.");
+    }
+});
+
+static async Task WaitUntilAsync(Func<bool> condition)
+{
+    var deadline = DateTime.UtcNow.AddSeconds(5);
+    while (!condition() && DateTime.UtcNow < deadline)
+    {
+        await Task.Delay(10);
+    }
+
+    True(condition(), "Timed out waiting for the expected state.");
+}
+
 static CopyJobRequest DefaultRequest(TestFixture fixture, params CopyOptionValue[] extra)
 {
     var values = new List<CopyOptionValue>
@@ -325,3 +370,49 @@ static void Equal<T>(T expected, T actual)
 }
 
 internal sealed record TestFixture(string Root, string Source, string Destination, string Logs);
+
+internal sealed class FakeRunner(int plannedDeletes) : IRobocopyRunner
+{
+    public event EventHandler<CopyJobProgress>? ProgressChanged { add { } remove { } }
+    public event EventHandler<string>? OutputReceived { add { } remove { } }
+
+    public CopyJobStage Stage => CopyJobStage.Idle;
+    public bool IsBusy => false;
+
+    public Task<ScanResult> ScanAsync(CopyJobRequest request, CancellationToken cancellationToken = default) =>
+        Task.FromResult(new ScanResult(100, 1, plannedDeletes, []));
+
+    public Task<CopyJobResult> StartAsync(CopyJobRequest request, ScanResult scan, CancellationToken cancellationToken = default) =>
+        throw new InvalidOperationException("The fake runner must not start a copy.");
+
+    public Task PauseAsync() => Task.CompletedTask;
+    public Task ResumeAsync() => Task.CompletedTask;
+    public Task StopAsync() => Task.CompletedTask;
+    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+}
+
+internal sealed class FakeDialogs : IUserDialogService
+{
+    public List<(string Destination, int PlannedDeletes, bool MovesSourceItems)> Confirmations { get; } = [];
+    public List<string> Errors { get; } = [];
+
+    public void ShowError(string title, string message) => Errors.Add(message);
+    public void ShowInformation(string title, string message) { }
+
+    public bool ConfirmDestructive(string destination, int plannedDeletes, bool movesSourceItems)
+    {
+        Confirmations.Add((destination, plannedDeletes, movesSourceItems));
+        return false;
+    }
+}
+
+internal sealed class FakeFolderPicker : IFolderPicker
+{
+    public string? PickFolder(string title, string initialFolder) => null;
+}
+
+internal sealed class FakeLauncher : IDesktopLauncher
+{
+    public void OpenPath(string path) { }
+    public void CopyText(string text) { }
+}
