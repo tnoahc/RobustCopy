@@ -233,6 +233,12 @@ static Task TestExitCodesAsync()
     {
         Equal(CopyOutcome.Failure, ExitCodeInterpreter.Interpret(failureCode, "log").Outcome);
     }
+    foreach (var abnormalCode in new[] { -1, -2, int.MinValue })
+    {
+        var abnormal = ExitCodeInterpreter.Interpret(abnormalCode, "log");
+        Equal(CopyOutcome.Failure, abnormal.Outcome);
+        Equal($"Robocopy terminated unexpectedly (exit code {abnormalCode}).", abnormal.Summary);
+    }
     Equal(CopyOutcome.Canceled, ExitCodeInterpreter.Interpret(-1, "log", true).Outcome);
     return Task.CompletedTask;
 }
