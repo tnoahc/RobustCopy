@@ -89,6 +89,16 @@ The main deliverable is `artifacts\publish\RobustCopy.exe`.
 
 The `artifacts/` directory contains generated build outputs and visual verification files and is intentionally excluded from version control. Run the publish command whenever the distributable executable needs to be refreshed.
 
+## Continuous integration
+
+The GitLab pipeline in [`.gitlab-ci.yml`](.gitlab-ci.yml) runs on merge requests, the default branch, and tags:
+
+- **build** runs `dotnet build RobustCopy.slnx --configuration Release`.
+- **test** runs the test project above; any failing test fails the job.
+- **publish** runs on tags only. It produces the self-contained `RobustCopy.exe` plus `RobustCopy.exe.sha256` (in the checksum format shown above) and keeps both as job artifacts.
+
+The jobs need a Windows runner using the shell executor with PowerShell, because WPF and the Robocopy integration tests cannot run in Docker and require a real `C:\Windows\System32\robocopy.exe`. The runner needs the .NET 10 SDK; an optional, commented-out `dotnet-install.ps1` step is included for runners without it. Jobs select the runner by the `windows` tag, which is set once under `default: tags:` and should be changed to match your runner.
+
 ## Safety notes
 
 - `/MIR` and `/PURGE` may delete destination content.

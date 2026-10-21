@@ -1,0 +1,83 @@
+# GitLab CI pipeline for RobustCopy (issue #12).
+#
+# RobustCopy is a WPF application and its integration tests drive the real
+# C:\Windows\System32\robocopy.exe, so every job must run on a Windows shell
+# runner using the PowerShell executor (shell = "powershell" or "pwsh").
+# Docker executors cannot build WPF or run robocopy.
+
+# Run pipelines for merge requests, the default branch, and tags (tags are
+# needed for the publish job). Pushes to other branches do not create branch
+# pipelines, so a branch with an open merge request gets only one pipeline.
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_TAG
+
+stages:
+  - build
+  - test
+  - publish
+
+variables:
+  DOTNET_NOLOGO: "true"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "true"
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: "true"
+
+default:
+  # PLACEHOLDER: the repository owner must confirm this tag matches the
+  # registered Windows shell runner (PowerShell executor) that has the
+  # .NET 10 SDK and robocopy.exe available.
+  tags:
+    - windows
+  # Keep NuGet packages inside the project directory so GitLab can cache them.
+  # GitLab cache paths must be relative to the project directory.
+  cache:
+    key:
+      files:
+        - src/RobustCopy/RobustCopy.csproj
+        - tests/RobustCopy.Tests/RobustCopy.Tests.csproj
+    paths:
+      - .nuget/packages/
+  before_script:
+    - $ErrorActionPreference = "Stop"
+    - $env:NUGET_PACKAGES = Join-Path $env:CI_PROJECT_DIR ".nuget\packages"
+    # Optional: uncomment on runners that do not have the .NET 10 SDK installed.
+    # - '[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12'
+    # - Invoke-WebRequest -Uri "https://dot.net/v1/dotnet-install.ps1" -OutFile "$env:TEMP\dotnet-install.ps1" -UseBasicParsing
+    # - '& "$env:TEMP\dotnet-install.ps1" -Channel 10.0 -InstallDir "$env:CI_PROJECT_DIR\.dotnet"'
+    # - $env:DOTNET_ROOT = "$env:CI_PROJECT_DIR\.dotnet"
+    # - $env:PATH = "$env:DOTNET_ROOT;$env:PATH"
+    - dotnet --info
+    - if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+build:
+  stage: build
+  script:
+    - dotnet build RobustCopy.slnx --configuration Release
+    - if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+test:
+  stage: test
+  script:
+    # The test runner exits non-zero when any test fails.
+    - dotnet run --project tests\RobustCopy.Tests\RobustCopy.Tests.csproj --configuration Release
+    - if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+publish:
+  stage: publish
+  rules:
+    - if: $CI_COMMIT_TAG
+  script:
+    - dotnet publish src\RobustCopy\RobustCopy.csproj --configuration Release --runtime win-x64 --self-contained true --output artifacts\publish
+    - if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    # Same format as the README: "HASH  RobustCopy.exe" (uppercase hex, two spaces).
+    - $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath "artifacts\publish\RobustCopy.exe").Hash
+    - '[IO.File]::WriteAllText((Join-Path $env:CI_PROJECT_DIR "artifacts\publish\RobustCopy.exe.sha256"), "$hash  RobustCopy.exe`n")'
+    - Get-Content "artifacts\publish\RobustCopy.exe.sha256"
+  artifacts:
+    name: "RobustCopy-$CI_COMMIT_TAG"
+    paths:
+      - artifacts/publish/RobustCopy.exe
+      - artifacts/publish/RobustCopy.exe.sha256
+    expire_in: never
