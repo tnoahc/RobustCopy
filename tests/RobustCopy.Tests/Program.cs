@@ -6,6 +6,9 @@ var tests = new (string Name, Func<Task> Run)[]
 {
     ("Application identity uses RobustCopy", TestAppIdentityAsync),
     ("Legacy application logs migrate to RobustCopy", TestLegacyLogMigrationAsync),
+    ("Legacy log migration runs once", TestLegacyLogMigrationRunsOnceAsync),
+    ("Log retention prunes only expired application logs", TestLogRetentionAsync),
+    ("Log retention skips logs that are still open", TestLogRetentionSkipsOpenLogsAsync),
     ("Argument tokenizer preserves quoted values", TestTokenizerAsync),
     ("Command builder keeps paths as individual arguments", TestCommandBuilderAsync),
     ("Validator blocks overlapping paths", TestOverlappingPathsAsync),
@@ -68,6 +71,96 @@ static Task TestLegacyLogMigrationAsync() => WithFixtureAsync(fixture =>
     Equal(Path.Combine(fixture.Root, AppIdentity.LocalDataFolderName, "Logs"), migratedDirectory);
     Equal("legacy transcript", File.ReadAllText(Path.Combine(migratedDirectory, "robocopy-legacy.log")));
     True(File.Exists(legacyLog), "Legacy logs should be copied without deleting the originals.");
+    return Task.CompletedTask;
+});
+
+static Task TestLegacyLogMigrationRunsOnceAsync() => WithFixtureAsync(fixture =>
+{
+    var legacyDirectory = Path.Combine(fixture.Root, AppIdentity.LegacyLocalDataFolderName, "Logs");
+    Directory.CreateDirectory(legacyDirectory);
+    File.WriteAllText(Path.Combine(legacyDirectory, "robocopy-first.log"), "first");
+
+    var logDirectory = AppIdentity.EnsureLogDirectory(fixture.Root);
+    True(File.Exists(Path.Combine(logDirectory, "robocopy-first.log")), "The first pass should migrate legacy logs.");
+    True(
+        File.Exists(Path.Combine(fixture.Root, AppIdentity.LocalDataFolderName, AppIdentity.LegacyMigrationMarkerName)),
+        "A successful migration should leave a marker.");
+
+    File.WriteAllText(Path.Combine(legacyDirectory, "robocopy-second.log"), "second");
+    var legacySnapshot = Directory.GetFiles(legacyDirectory).Order().ToArray();
+    AppIdentity.EnsureLogDirectory(fixture.Root);
+    True(!File.Exists(Path.Combine(logDirectory, "robocopy-second.log")), "Migration should not run a second time.");
+    Equal(string.Join("|", legacySnapshot), string.Join("|", Directory.GetFiles(legacyDirectory).Order()));
+
+    AppIdentity.PruneOldLogs(logDirectory, DateTime.UtcNow.AddYears(10));
+    Equal("first", File.ReadAllText(Path.Combine(legacyDirectory, "robocopy-first.log")));
+    Equal("second", File.ReadAllText(Path.Combine(legacyDirectory, "robocopy-second.log")));
+    return Task.CompletedTask;
+});
+
+static Task TestLogRetentionAsync() => WithFixtureAsync(fixture =>
+{
+    var logDirectory = Path.Combine(fixture.Root, "Logs");
+    Directory.CreateDirectory(logDirectory);
+    var now = new DateTime(2026, 10, 21, 12, 0, 0, DateTimeKind.Utc);
+    var expired = now.AddDays(-AppIdentity.LogRetentionDays - 1);
+    var recent = now.AddDays(-AppIdentity.LogRetentionDays + 1);
+
+    var files = new (string Name, DateTime LastWrite, bool Kept)[]
+    {
+        ("robocopy-old.log", expired, false),
+        ("crash-old.log", expired, false),
+        ("robocopy-new.log", recent, true),
+        ("crash-new.log", recent, true),
+        ("notes.txt", expired, true),
+        (".legacy-migrated", expired, true),
+        ("other-old.log", expired, true),
+        ("robocopy-old.log.bak", expired, true)
+    };
+    foreach (var file in files)
+    {
+        var path = Path.Combine(logDirectory, file.Name);
+        File.WriteAllText(path, file.Name);
+        File.SetLastWriteTimeUtc(path, file.LastWrite);
+    }
+
+    var nested = Path.Combine(logDirectory, "nested");
+    Directory.CreateDirectory(nested);
+    var nestedLog = Path.Combine(nested, "robocopy-nested.log");
+    File.WriteAllText(nestedLog, "nested");
+    File.SetLastWriteTimeUtc(nestedLog, expired);
+
+    Equal(2, AppIdentity.PruneOldLogs(logDirectory, now));
+    foreach (var file in files)
+    {
+        Equal(file.Kept, File.Exists(Path.Combine(logDirectory, file.Name)));
+    }
+
+    True(File.Exists(nestedLog), "Retention should not recurse into subdirectories.");
+    Equal(0, AppIdentity.PruneOldLogs(Path.Combine(fixture.Root, "missing"), now));
+    return Task.CompletedTask;
+});
+
+static Task TestLogRetentionSkipsOpenLogsAsync() => WithFixtureAsync(fixture =>
+{
+    var logDirectory = Path.Combine(fixture.Root, "Logs");
+    Directory.CreateDirectory(logDirectory);
+    var now = DateTime.UtcNow;
+    var openLog = Path.Combine(logDirectory, "robocopy-open.log");
+    var closedLog = Path.Combine(logDirectory, "robocopy-closed.log");
+    foreach (var path in new[] { openLog, closedLog })
+    {
+        File.WriteAllText(path, "transcript");
+        File.SetLastWriteTimeUtc(path, now.AddDays(-AppIdentity.LogRetentionDays - 10));
+    }
+
+    using (new FileStream(openLog, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+    {
+        Equal(1, AppIdentity.PruneOldLogs(logDirectory, now));
+    }
+
+    True(File.Exists(openLog), "An open log should be skipped.");
+    True(!File.Exists(closedLog), "Other expired logs should still be pruned.");
     return Task.CompletedTask;
 });
 

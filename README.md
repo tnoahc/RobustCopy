@@ -34,7 +34,7 @@ The 62.1 MB executable is self-contained; no separate .NET installation is requi
 - Show overall/current-file progress, transfer speed, ETA, file counts, and live output.
 - Pause and resume the live Robocopy process, or stop it permanently.
 - Require confirmation for Mirror, Purge, and Move modes.
-- Save UTF-8 run transcripts under `%LocalAppData%\RobustCopy\Logs`.
+- Save UTF-8 run transcripts under `%LocalAppData%\RobustCopy\Logs`; logs older than 90 days are removed automatically at startup.
 - Preserve logs from earlier installations by copying them into the RobustCopy log directory on first use.
 - Run Robocopy without `cmd.exe`; paths and switches are passed through `ProcessStartInfo.ArgumentList`.
 
