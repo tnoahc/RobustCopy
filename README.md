@@ -89,6 +89,17 @@ The main deliverable is `artifacts\publish\RobustCopy.exe`.
 
 The `artifacts/` directory contains generated build outputs and visual verification files and is intentionally excluded from version control. Run the publish command whenever the distributable executable needs to be refreshed.
 
+## Continuous integration
+
+The GitLab pipeline in [`.gitlab-ci.yml`](.gitlab-ci.yml) runs on merge requests, the default branch, and tags:
+
+- **build** runs `dotnet build RobustCopy.slnx --configuration Release`.
+- **test** runs the test project above; any failing test fails the job.
+- **publish** runs on tags only. It produces the self-contained `RobustCopy.exe` plus `RobustCopy.exe.sha256` (in the checksum format shown above) and keeps both as job artifacts.
+- **release** runs on tags only, after **publish**. It uploads both files to the project's Generic Package Registry as package `RobustCopy`, version = the tag without a leading `v` (so tags look like `v1.2.3`), and then creates a GitLab Release named `RobustCopy <tag>` whose description contains the SHA-256 line and whose asset links point at the two package files. It uses only PowerShell `Invoke-RestMethod` with `CI_JOB_TOKEN` (no `release-cli` or `glab`). The job fails if a release for the tag already exists.
+
+The jobs need a Windows runner using the shell executor with PowerShell, because WPF and the Robocopy integration tests cannot run in Docker and require a real `C:\Windows\System32\robocopy.exe`. The .NET 10 SDK is expected to be preinstalled on the runner; a commented-out `dotnet-install.ps1` fallback is kept in `.gitlab-ci.yml` for runners without it. Creating releases requires the Package Registry to be enabled and the user who pushes the tag to have at least the Developer role. Jobs select the runner by the `windows` tag, which is set once under `default: tags:` and should be changed to match your runner.
+
 ## Safety notes
 
 - `/MIR` and `/PURGE` may delete destination content.

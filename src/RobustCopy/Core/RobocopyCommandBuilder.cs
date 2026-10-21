@@ -62,13 +62,41 @@ public static class RobocopyCommandBuilder
         }
     }
 
+    // Quotes using the CommandLineToArgvW / MSVCRT rules so the preview round-trips when pasted:
+    // backslashes are only special when they precede a quote, so those runs are doubled.
     private static string QuoteForDisplay(string value)
     {
-        if (!value.Any(char.IsWhiteSpace) && !value.Contains('"'))
+        if (value.Length > 0 && !value.Any(char.IsWhiteSpace) && !value.Contains('"'))
         {
             return value;
         }
 
-        return $"\"{value.Replace("\"", "\\\"")}\"";
+        var builder = new StringBuilder(value.Length + 2);
+        builder.Append('"');
+        var backslashes = 0;
+        foreach (var character in value)
+        {
+            if (character == '\\')
+            {
+                backslashes++;
+                continue;
+            }
+
+            if (character == '"')
+            {
+                builder.Append('\\', backslashes * 2 + 1);
+            }
+            else
+            {
+                builder.Append('\\', backslashes);
+            }
+
+            backslashes = 0;
+            builder.Append(character);
+        }
+
+        builder.Append('\\', backslashes * 2);
+        builder.Append('"');
+        return builder.ToString();
     }
 }
