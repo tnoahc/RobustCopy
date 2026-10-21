@@ -11,6 +11,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ("Validator blocks overlapping paths", TestOverlappingPathsAsync),
     ("Validator reports option conflicts", TestOptionConflictsAsync),
     ("Option catalog preserves the original category organization", TestOptionCategoriesAsync),
+    ("Selecting an option turns off conflicting options", TestOptionAutoDeselectAsync),
     ("Validator protects GUI-owned advanced flags", TestAdvancedProtectionAsync),
     ("Output parser reads bytes, paths, percentages, and extras", TestOutputParserAsync),
     ("Exit codes map to Robocopy outcomes", TestExitCodesAsync),
@@ -132,6 +133,46 @@ static Task TestOptionCategoriesAsync()
     }
     True(options.All(option => option.Category == option.Definition.Category), "UI categories must match the catalog categories.");
     return Task.CompletedTask;
+}
+
+static async Task TestOptionAutoDeselectAsync()
+{
+    var desktop = new DesktopServices();
+    await using var viewModel = new MainViewModel(
+        new RobocopyRunner(Path.Combine(Path.GetTempPath(), "RobustCopyTests", "issue15-logs")),
+        desktop,
+        desktop,
+        desktop);
+    OptionItemViewModel Option(string id) => viewModel.Options.Single(option => option.Id == id);
+    void NoConflictErrors()
+    {
+        var request = Request(@"C:\Source", @"D:\Destination",
+            viewModel.Options.Where(option => option.IsSelected).Select(option => option.ToSelection()).ToArray());
+        var errors = CopyJobValidator.Validate(request, requireExistingSource: false);
+        True(!errors.Any(error => error.Contains("cannot be combined", StringComparison.OrdinalIgnoreCase)), string.Join(" ", errors));
+    }
+
+    True(Option("EmptySubdirectories").IsSelected && Option("Restartable").IsSelected, "Expected the default selections.");
+    True(viewModel.Options.All(option => option.IsAvailable), "Conflicts must no longer disable options.");
+    Equal("Selecting this turns off “Include subfolders”.", Option("Mirror").ConflictMessage);
+    Equal(string.Empty, Option("EmptySubdirectories").ConflictMessage);
+    NoConflictErrors();
+
+    Option("Mirror").IsSelected = true;
+    True(Option("Mirror").IsSelected, "Mirror should stay selected.");
+    True(!Option("EmptySubdirectories").IsSelected, "Mirror should turn off Include subfolders.");
+    Equal(string.Empty, Option("Mirror").ConflictMessage);
+    Equal("Selecting this turns off “Mirror”.", Option("EmptySubdirectories").ConflictMessage);
+    NoConflictErrors();
+
+    Option("Backup").IsSelected = true;
+    True(Option("Backup").IsSelected && !Option("Restartable").IsSelected, "Backup should turn off Restartable.");
+    NoConflictErrors();
+
+    Option("EmptySubdirectories").IsSelected = true;
+    True(Option("EmptySubdirectories").IsSelected && !Option("Mirror").IsSelected, "Include subfolders should turn off Mirror.");
+    True(viewModel.Options.All(option => option.IsAvailable), "Conflicts must no longer disable options.");
+    NoConflictErrors();
 }
 
 static Task TestAdvancedProtectionAsync()
