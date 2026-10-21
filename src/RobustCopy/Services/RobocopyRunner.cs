@@ -404,9 +404,11 @@ public sealed class RobocopyRunner : IRobocopyRunner
         }
     }
 
-    private static bool IsMultiThreaded(CopyJobRequest request) =>
+    internal static bool IsMultiThreaded(CopyJobRequest request) =>
         request.Options.Any(option => option.Id.Equals("MultiThreaded", StringComparison.OrdinalIgnoreCase)) ||
-        ArgumentTokenizer.Parse(request.AdvancedOptions).Any(option => option.StartsWith("/MT", StringComparison.OrdinalIgnoreCase));
+        ArgumentTokenizer.Parse(request.AdvancedOptions)
+            .Select(ArgumentTokenizer.NormalizeSwitch)
+            .Any(option => option.StartsWith("/MT", StringComparison.OrdinalIgnoreCase));
 
     private void EnsureIdle()
     {
