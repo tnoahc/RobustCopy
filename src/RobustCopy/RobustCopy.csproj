@@ -31,4 +31,8 @@
     <Resource Include="Assets\RobustCopy.ico" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="RobustCopy.Tests" />
+  </ItemGroup>
+
 </Project>
