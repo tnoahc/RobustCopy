@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Globalization;
 using System.IO;
 using System.Text;
 using RobustCopy.Core;
@@ -246,8 +245,7 @@ public sealed class RobocopyRunner : IRobocopyRunner
             throw new FileNotFoundException("Robocopy is not available on this Windows installation.", robocopyPath);
         }
 
-        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-        var outputEncoding = Encoding.GetEncoding(CultureInfo.CurrentCulture.TextInfo.OEMCodePage);
+        var outputEncoding = SystemOemEncoding.Instance;
         var startInfo = new ProcessStartInfo(robocopyPath)
         {
             UseShellExecute = false,

@@ -25,7 +25,8 @@ var tests = new (string Name, Func<Task> Run)[]
     ("Stop during copy startup prevents Robocopy launch", TestStopDuringCopyStartupAsync),
     ("Stop during scan startup prevents Robocopy launch", TestStopDuringScanStartupAsync),
     ("Stop right after start leaves no copy running", TestStopImmediatelyAfterStartAsync),
-    ("Mirror pre-scan reports planned deletion", TestMirrorScanIntegrationAsync)
+    ("Mirror pre-scan reports planned deletion", TestMirrorScanIntegrationAsync),
+    ("Robocopy output decodes non-ASCII names with the system OEM code page", TestOemFileNameIntegrationAsync)
 };
 
 var failures = 0;
@@ -463,6 +464,51 @@ static async Task TestMirrorScanIntegrationAsync()
     });
 }
 
+static async Task TestOemFileNameIntegrationAsync()
+{
+    // Robocopy writes redirected output in the system OEM code page (GetOEMCP), so a name is only
+    // expected to survive the round trip when that code page can represent it.
+    System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
+    var systemOem = System.Text.Encoding.GetEncoding(
+        (int)NativeMethods.GetOEMCP(),
+        System.Text.EncoderFallback.ExceptionFallback,
+        System.Text.DecoderFallback.ExceptionFallback);
+    var fileName = new[] { "café.txt", "naïve.txt", "Ünïcödé.txt" }.FirstOrDefault(name =>
+    {
+        try
+        {
+            return systemOem.GetString(systemOem.GetBytes(name)) == name;
+        }
+        catch (System.Text.EncoderFallbackException)
+        {
+            return false;
+        }
+    });
+    if (fileName is null)
+    {
+        Console.WriteLine($"      (skipped: system OEM code page {systemOem.CodePage} cannot represent the sample names)");
+        return;
+    }
+
+    await WithFixtureAsync(async fixture =>
+    {
+        await File.WriteAllTextAsync(Path.Combine(fixture.Source, fileName), "oem");
+        await using var runner = new RobocopyRunner(fixture.Logs);
+        var output = new List<string>();
+        runner.OutputReceived += (_, line) => output.Add(line);
+        var request = DefaultRequest(fixture);
+        var scan = await runner.ScanAsync(request);
+        True(scan.FileCount == 1, $"Expected one scan file, found {scan.FileCount}. Output: {string.Join(" | ", output)}");
+        var result = await runner.StartAsync(request, scan);
+        True(result.Outcome is CopyOutcome.Success or CopyOutcome.SuccessWithWarnings, result.Summary);
+        True(File.Exists(Path.Combine(fixture.Destination, fileName)), $"Expected {fileName} to be copied.");
+        True(output.Any(line => line.Contains(fileName, StringComparison.Ordinal)),
+            $"Expected Robocopy output to contain '{fileName}' (system OEM code page {systemOem.CodePage}). Output: {string.Join(" | ", output)}");
+        var transcript = await File.ReadAllTextAsync(result.LogPath);
+        True(transcript.Contains(fileName, StringComparison.Ordinal), $"Expected the transcript to contain '{fileName}'.");
+    });
+}
+
 static CopyJobRequest DefaultRequest(TestFixture fixture, params CopyOptionValue[] extra)
 {
     var values = new List<CopyOptionValue>
@@ -526,3 +572,9 @@ static void Equal<T>(T expected, T actual)
 }
 
 internal sealed record TestFixture(string Root, string Source, string Destination, string Logs);
+
+internal static class NativeMethods
+{
+    [System.Runtime.InteropServices.DllImport("kernel32.dll")]
+    internal static extern uint GetOEMCP();
+}
