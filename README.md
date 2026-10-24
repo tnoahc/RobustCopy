@@ -6,6 +6,8 @@
 
 A native Windows interface for `robocopy.exe`, built with .NET 10 WPF. It keeps Robocopy's reliability while adding safe option selection, descriptive help, pre-scan totals, live progress, Pause/Resume/Stop controls, command preview, and persistent logs.
 
+A Rust rewrite, RobustCopy 2.0, is in preview alongside it. It lives in [`rust/`](rust/README.md) and is built with [egui](https://github.com/emilk/egui).
+
 The interface design references are kept in [`docs/mockups`](docs/mockups/README.md).
 
 ## Download
@@ -22,6 +24,20 @@ The 62.1 MB executable is self-contained; no separate .NET installation is requi
 
 ```powershell
 Get-FileHash .\RobustCopy.exe -Algorithm SHA256
+```
+
+### Preview: RobustCopy 2.0.0 (Rust rewrite)
+
+RobustCopy 2.0.0 Preview 1 is the same application rewritten in Rust. It is published as a GitHub pre-release; 1.0.2 above remains the recommended download.
+
+- [Download the preview RobustCopy.exe](https://github.com/tnoahc/RobustCopy/releases/download/v2.0.0-preview.1/RobustCopy.exe)
+- [Download its SHA-256 checksum](https://github.com/tnoahc/RobustCopy/releases/download/v2.0.0-preview.1/RobustCopy.exe.sha256)
+- [View the pre-release](https://github.com/tnoahc/RobustCopy/releases/tag/v2.0.0-preview.1)
+
+The preview is a single 15.0 MB executable with no runtime to install. It keeps the 1.0.2 feature set; the [Rust port README](rust/README.md#differences-from-the-wpf-version) lists the small differences in behaviour. Its SHA-256 is:
+
+```text
+BD822AE5519657380F3A4B5D881E412DE4A1EEF1E9E512D83384E28204532FF8  RobustCopy.exe
 ```
 
 ### What's new in 1.0.2
@@ -81,6 +97,7 @@ The Start, Pause, Resume, and Stop controls remain visible in the header, alongs
 - Windows 10 or Windows 11, x64.
 - The .NET 10 SDK is required only to build from source.
 - The published self-contained executable does not require a separately installed .NET runtime.
+- The Rust preview builds with the stable [Rust toolchain](https://rustup.rs) for MSVC and the Visual Studio Build Tools (C++ workload with the Windows SDK).
 
 ## Build and run
 
@@ -92,6 +109,15 @@ dotnet run --project src\RobustCopy\RobustCopy.csproj
 ```
 
 If an installer has just added the SDK and the current terminal has not refreshed its `PATH`, start a new PowerShell window or invoke `C:\Program Files\dotnet\dotnet.exe` directly.
+
+To build and run the Rust preview instead:
+
+```powershell
+cd rust
+cargo run --release
+```
+
+The release build is `rust\target\release\RobustCopy.exe`. Run `cargo test` in `rust` for its tests; see the [Rust port README](rust/README.md) for details.
 
 ## Tests
 
@@ -133,6 +159,8 @@ The jobs need a Windows runner using the shell executor with PowerShell, because
 Releasing requires a `GITHUB_TOKEN` CI variable that is masked and protected: a fine-grained GitHub token with **Contents: read and write** on `tnoahc/RobustCopy`. Version tags (`v*`) must be protected so that tag pipelines can read it.
 
 To release a new version: bump `<Version>` in `src/RobustCopy/RobustCopy.csproj` and the version in `src/RobustCopy/app.manifest`, update the version and links in this README's Download section and add a "What's new in <version>" section, merge, then tag the merge commit (for example `git tag -a v1.0.3 -m "RobustCopy 1.0.3"`) and push the tag to GitLab.
+
+Rust previews are released by hand: bump `version` in `rust/Cargo.toml`, build with `cargo build --release`, tag the commit `v<version>-preview.<n>`, and publish a GitHub pre-release with `RobustCopy.exe` and `RobustCopy.exe.sha256`. Preview tags do not match the `v1.2.3` rule, so they never start the release job.
 
 ## Safety notes
 
