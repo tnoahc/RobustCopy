@@ -8,8 +8,7 @@ The port keeps the WPF version's behaviour: the same option catalog, validation 
 list-only pre-scan, destructive-operation confirmation, live progress, Pause/Resume/Stop, UTF-8 transcripts
 under `%LocalAppData%\RobustCopy\Logs` with 90-day retention, and crash reports.
 
-The current build is **RobustCopy 2.0.0 Preview 1**, published as a
-[GitHub pre-release](https://github.com/tnoahc/RobustCopy/releases/tag/v2.0.0-preview.1).
+The current release is [RobustCopy 2.0.0](https://github.com/tnoahc/RobustCopy/releases/tag/v2.0.0).
 
 ## Layout
 
