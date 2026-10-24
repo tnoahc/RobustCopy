@@ -48,6 +48,24 @@ Get-FileHash .\RobustCopy.exe -Algorithm SHA256
 - [Browse the GitHub repository](https://github.com/tnoahc/RobustCopy)
 - [Read the privacy policy](PRIVACY.md)
 
+### What's new in 2.0.0
+
+**A new RobustCopy**
+
+- RobustCopy 2 is a rewrite of RobustCopy in Rust. It ships as a single 15 MB executable, down from 62 MB, with no .NET or other runtime to install.
+- It keeps everything RobustCopy 1.0.2 does: the option catalog and conflict handling, validation, command preview, list-only pre-scan, confirmation for destructive modes, live progress, Pause/Resume/Stop, UTF-8 transcripts with 90-day retention, and crash reports.
+
+**Changes from RobustCopy 1**
+
+- Dialogs (errors, destructive confirmation, close confirmation) are drawn in the app's own theme; the folder picker is still the native Windows dialog.
+- An unexpected error on the GUI thread writes a crash report and closes the app. Errors on the copy thread are reported and the app keeps running.
+- Stop returns immediately and the run finishes in the background, so the header shows `STOPPING` until Robocopy has exited.
+- Pausing right after Start waits for Robocopy to launch instead of failing.
+
+**RobustCopy 1**
+
+- [RobustCopy 1.0.2](https://github.com/tnoahc/RobustCopy/releases/tag/v1.0.2), the .NET WPF version, stays available, and fixes for it will continue as 1.x releases.
+
 ### What's new in 1.0.2
 
 **Safety**
