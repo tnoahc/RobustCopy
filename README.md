@@ -4,41 +4,49 @@
   <img src="src/RobustCopy/Assets/RobustCopyIcon.png" alt="RobustCopy app icon" width="160">
 </p>
 
-A native Windows interface for `robocopy.exe`, built with .NET 10 WPF. It keeps Robocopy's reliability while adding safe option selection, descriptive help, pre-scan totals, live progress, Pause/Resume/Stop controls, command preview, and persistent logs.
+A native Windows interface for `robocopy.exe`. It keeps Robocopy's reliability while adding safe option selection, descriptive help, pre-scan totals, live progress, Pause/Resume/Stop controls, command preview, and persistent logs.
 
-A Rust rewrite, RobustCopy 2.0, is in preview alongside it. It lives in [`rust/`](rust/README.md) and is built with [egui](https://github.com/emilk/egui).
+RobustCopy is released in two lines, side by side:
+
+| Line | Versions | Built with | Source |
+| --- | --- | --- | --- |
+| **RobustCopy 2** | 2.x | Rust and [egui](https://github.com/emilk/egui); a single 15 MB executable | [`rust/`](rust/README.md) |
+| **RobustCopy 1** | 1.x | .NET 10 WPF; a self-contained 62 MB executable | [`src/RobustCopy`](src/RobustCopy) |
+
+Both have the same features. RobustCopy 2 is in preview; until 2.0.0 is released, RobustCopy 1 is the recommended download.
 
 The interface design references are kept in [`docs/mockups`](docs/mockups/README.md).
 
 ## Download
 
-The current release is **RobustCopy 1.0.2**, published by **Kaleb Creative Studio** for Windows 10 and Windows 11 x64.
+Both lines are published by **Kaleb Creative Studio** for Windows 10 and Windows 11 x64. All releases are listed on the [GitHub releases page](https://github.com/tnoahc/RobustCopy/releases).
+
+### RobustCopy 1.0.2 (recommended)
 
 - [Download RobustCopy.exe](https://github.com/tnoahc/RobustCopy/releases/download/v1.0.2/RobustCopy.exe)
 - [Download the SHA-256 checksum](https://github.com/tnoahc/RobustCopy/releases/download/v1.0.2/RobustCopy.exe.sha256)
 - [View the GitHub release](https://github.com/tnoahc/RobustCopy/releases/tag/v1.0.2)
-- [Browse the GitHub repository](https://github.com/tnoahc/RobustCopy)
-- [Read the privacy policy](PRIVACY.md)
 
-The 62.1 MB executable is self-contained; no separate .NET installation is required. Each release publishes its SHA-256 checksum as `RobustCopy.exe.sha256` next to the executable. To verify a download, compare it with:
+The 62.1 MB executable is self-contained; no separate .NET installation is required.
+
+### RobustCopy 2.0.0 Preview 1
+
+- [Download RobustCopy.exe](https://github.com/tnoahc/RobustCopy/releases/download/v2.0.0-preview.1/RobustCopy.exe)
+- [Download the SHA-256 checksum](https://github.com/tnoahc/RobustCopy/releases/download/v2.0.0-preview.1/RobustCopy.exe.sha256)
+- [View the GitHub pre-release](https://github.com/tnoahc/RobustCopy/releases/tag/v2.0.0-preview.1)
+
+A single 15.0 MB executable with no runtime to install. The [Rust port README](rust/README.md#differences-from-the-wpf-version) lists the small differences in behaviour from RobustCopy 1.
+
+### Verify a download
+
+Each release publishes its SHA-256 checksum as `RobustCopy.exe.sha256` next to the executable. To verify a download, compare the checksum with:
 
 ```powershell
 Get-FileHash .\RobustCopy.exe -Algorithm SHA256
 ```
 
-### Preview: RobustCopy 2.0.0 (Rust rewrite)
-
-RobustCopy 2.0.0 Preview 1 is the same application rewritten in Rust. It is published as a GitHub pre-release; 1.0.2 above remains the recommended download.
-
-- [Download the preview RobustCopy.exe](https://github.com/tnoahc/RobustCopy/releases/download/v2.0.0-preview.1/RobustCopy.exe)
-- [Download its SHA-256 checksum](https://github.com/tnoahc/RobustCopy/releases/download/v2.0.0-preview.1/RobustCopy.exe.sha256)
-- [View the pre-release](https://github.com/tnoahc/RobustCopy/releases/tag/v2.0.0-preview.1)
-
-The preview is a single 15.0 MB executable with no runtime to install. It keeps the 1.0.2 feature set; the [Rust port README](rust/README.md#differences-from-the-wpf-version) lists the small differences in behaviour. Its SHA-256 is:
-
-```text
-BD822AE5519657380F3A4B5D881E412DE4A1EEF1E9E512D83384E28204532FF8  RobustCopy.exe
-```
+- [Browse the GitHub repository](https://github.com/tnoahc/RobustCopy)
+- [Read the privacy policy](PRIVACY.md)
 
 ### What's new in 1.0.2
 
@@ -97,7 +105,7 @@ The Start, Pause, Resume, and Stop controls remain visible in the header, alongs
 - Windows 10 or Windows 11, x64.
 - The .NET 10 SDK is required only to build from source.
 - The published self-contained executable does not require a separately installed .NET runtime.
-- The Rust preview builds with the stable [Rust toolchain](https://rustup.rs) for MSVC and the Visual Studio Build Tools (C++ workload with the Windows SDK).
+- RobustCopy 2 (Rust) builds with the stable [Rust toolchain](https://rustup.rs) for MSVC and the Visual Studio Build Tools (C++ workload with the Windows SDK).
 
 ## Build and run
 
@@ -110,7 +118,7 @@ dotnet run --project src\RobustCopy\RobustCopy.csproj
 
 If an installer has just added the SDK and the current terminal has not refreshed its `PATH`, start a new PowerShell window or invoke `C:\Program Files\dotnet\dotnet.exe` directly.
 
-To build and run the Rust preview instead:
+To build and run RobustCopy 2 (Rust) instead:
 
 ```powershell
 cd rust
@@ -145,22 +153,32 @@ The `artifacts/` directory contains generated build outputs and visual verificat
 
 The GitLab pipeline in [`.gitlab-ci.yml`](.gitlab-ci.yml) runs on merge requests, the default branch, and tags:
 
-- **build** runs `dotnet build RobustCopy.slnx --configuration Release`.
-- **test** runs the test project above; any failing test fails the job.
-- **release** runs on version tags only (`v1.2.3`), after the tests pass, using [`ci/release.ps1`](ci/release.ps1):
-  1. Builds the self-contained `RobustCopy.exe` and writes `RobustCopy.exe.sha256` in the checksum format shown above.
-  2. Pushes the tag to GitHub and creates the GitHub release `RobustCopy <version>` with `RobustCopy.exe`, `RobustCopy.exe.sha256`, and `RobustCopy.pdb`. The release is created as a draft and published only after every file has uploaded. Its notes come from the README's "What's new in <version>" section, followed by the checksum.
-  3. Creates the GitLab release with the same notes and download links that point to the GitHub files. The executable is not uploaded to GitLab, because the GitLab instance's proxy cannot accept uploads that large.
+- **build** runs `dotnet build RobustCopy.slnx --configuration Release`, and **build-rust** runs `cargo build --release` for the Rust app.
+- **test** runs the test project above, and **test-rust** runs `cargo test`; any failing test fails the job.
+- **release** runs on version tags only (`v1.2.3`, or `v1.2.3-preview.4` for a pre-release), after the tests pass, using [`ci/release.ps1`](ci/release.ps1). The tag's major version picks the app: `v1.*` releases RobustCopy 1 (WPF) and `v2.*` releases RobustCopy 2 (Rust). The job:
+  1. Checks that the tag matches the app's version, then builds `RobustCopy.exe` and writes `RobustCopy.exe.sha256` in the checksum format shown above.
+  2. Pushes the tag to GitHub and creates the GitHub release `RobustCopy <version>` with `RobustCopy.exe`, `RobustCopy.exe.sha256`, and `RobustCopy.pdb`. The release is created as a draft and published only after every file has uploaded. Its notes come from the README's "What's new in <version>" section (for a preview, "What's new in 2.1.0 Preview 1"), followed by the checksum.
+  3. Marks the release as GitHub's Latest only if it is the highest stable version, so a 1.x maintenance release never replaces 2.x as Latest. Preview tags become pre-releases and are never Latest.
+  4. Creates the GitLab release with the same notes and download links that point to the GitHub files. The executables are not uploaded to GitLab, because the GitLab instance's proxy cannot accept uploads that large.
 
-  The job fails with a clear message if a release for the tag already exists, or if an upload fails (the GitHub release is then left as a draft).
+  The job fails with a clear message if the tag does not match the app's version, if a release for the tag already exists, or if an upload fails (the GitHub release is then left as a draft).
 
-The jobs need a Windows runner using the shell executor with PowerShell, because WPF and the Robocopy integration tests cannot run in Docker and require a real `C:\Windows\System32\robocopy.exe`. The .NET 10 SDK is expected to be preinstalled on the runner; a commented-out `dotnet-install.ps1` fallback is kept in `.gitlab-ci.yml` for runners without it. Jobs select the runner by the `windows` tag, which is set once under `default: tags:`.
+The jobs need a Windows runner using the shell executor with PowerShell, because WPF and the Robocopy integration tests cannot run in Docker and require a real `C:\Windows\System32\robocopy.exe`. The .NET 10 SDK is expected to be preinstalled on the runner; a commented-out `dotnet-install.ps1` fallback is kept in `.gitlab-ci.yml` for runners without it. The Rust jobs, and releases of RobustCopy 2, also need the stable [Rust toolchain](https://rustup.rs) for MSVC and the Visual Studio Build Tools C++ workload with the Windows SDK. Rust build output is kept in `CARGO_TARGET_DIR`, outside the project directory, so later pipelines only rebuild what changed. Jobs select the runner by the `windows` tag, which is set once under `default: tags:`.
 
 Releasing requires a `GITHUB_TOKEN` CI variable that is masked and protected: a fine-grained GitHub token with **Contents: read and write** on `tnoahc/RobustCopy`. Version tags (`v*`) must be protected so that tag pipelines can read it.
 
-To release a new version: bump `<Version>` in `src/RobustCopy/RobustCopy.csproj` and the version in `src/RobustCopy/app.manifest`, update the version and links in this README's Download section and add a "What's new in <version>" section, merge, then tag the merge commit (for example `git tag -a v1.0.3 -m "RobustCopy 1.0.3"`) and push the tag to GitLab.
+To release a new version:
 
-Rust previews are released by hand: bump `version` in `rust/Cargo.toml`, build with `cargo build --release`, tag the commit `v<version>-preview.<n>`, and publish a GitHub pre-release with `RobustCopy.exe` and `RobustCopy.exe.sha256`. Preview tags do not match the `v1.2.3` rule, so they never start the release job.
+1. Bump the app's version: `<Version>` in `src/RobustCopy/RobustCopy.csproj` and the version in `src/RobustCopy/app.manifest` for RobustCopy 1, or `version` in `rust/Cargo.toml` for RobustCopy 2 (its manifest version follows automatically).
+2. Update the version and links in this README's Download section and add a "What's new in <version>" section.
+3. Merge, then tag the merge commit (for example `git tag -a v1.0.3 -m "RobustCopy 1.0.3"` or `git tag -a v2.0.0 -m "RobustCopy 2.0.0"`) and push the tag to GitLab.
+
+To check a release without publishing it, run the script locally with `RELEASE_DRY_RUN` set; it builds the app and prints the release notes:
+
+```powershell
+$env:CI_COMMIT_TAG = 'v2.0.0'; $env:RELEASE_DRY_RUN = '1'
+powershell -NoProfile -ExecutionPolicy Bypass -File ci\release.ps1
+```
 
 ## Safety notes
 

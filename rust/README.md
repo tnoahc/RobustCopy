@@ -1,7 +1,8 @@
 # RobustCopy (Rust port)
 
-A Rust rewrite of RobustCopy using [egui/eframe](https://github.com/emilk/egui). It lives next to the
-.NET WPF version in this repository until it reaches feature parity.
+A Rust rewrite of RobustCopy using [egui/eframe](https://github.com/emilk/egui), released as
+**RobustCopy 2** (versions 2.x). The .NET WPF version in `src/RobustCopy` continues as RobustCopy 1
+(versions 1.x); both are released from this repository, as described in the main README.
 
 The port keeps the WPF version's behaviour: the same option catalog, validation rules, command preview,
 list-only pre-scan, destructive-operation confirmation, live progress, Pause/Resume/Stop, UTF-8 transcripts
@@ -34,7 +35,8 @@ cargo run --release
 ```
 
 The release build is a single self-contained `target\release\RobustCopy.exe` with the icon, version
-information, and the application manifest embedded (see `build.rs`).
+information, and the application manifest (`app.manifest`) embedded (see `build.rs`). The version comes
+from `Cargo.toml`, so a release only needs that one version bumped.
 
 ## Tests
 
