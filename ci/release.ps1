@@ -1,6 +1,12 @@
 # Publishes a tagged build: GitHub release with the binaries, plus a GitLab release that links to them.
 #
-# The 62 MB executable is uploaded to GitHub only. The GitLab instance sits behind a proxy that
+# RobustCopy has two release lines, chosen by the tag's major version:
+#   v1.x.y  RobustCopy 1, the .NET WPF app in src\RobustCopy (dotnet publish)
+#   v2.x.y  RobustCopy 2, the Rust app in rust\ (cargo build), and any later major version
+# A -preview.N suffix (v2.1.0-preview.1) publishes a GitHub pre-release. The tag's version must match
+# the project's version (<Version> in RobustCopy.csproj, or version in Cargo.toml).
+#
+# The executables are uploaded to GitHub only. The GitLab instance sits behind a proxy that
 # cannot accept uploads that large, so the GitLab release stores links instead of files.
 #
 # Required environment (provided by GitLab CI, except GITHUB_TOKEN):
@@ -11,7 +17,10 @@
 #   GITHUB_API_URL     default https://api.github.com
 #   GITHUB_UPLOADS_URL default https://uploads.github.com
 #   GITHUB_GIT_URL     default https://github.com/<GITHUB_REPOSITORY>.git
+#   CARGO_TARGET_DIR   where cargo writes the Rust build, default rust\target
 #   RELEASE_SKIP_BUILD set to 1 to reuse an existing artifacts\publish folder
+#   RELEASE_DRY_RUN    set to 1 to build and print the release notes without publishing anything
+#                      (CI_COMMIT_TAG is still required; CI_PROJECT_DIR defaults to the repository root)
 
 $ErrorActionPreference = 'Stop'
 [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
@@ -38,21 +47,60 @@ function Get-ErrorDetail($errorRecord)
 
 $tag = $env:CI_COMMIT_TAG
 if ([string]::IsNullOrWhiteSpace($tag)) { Fail 'CI_COMMIT_TAG is not set; releases only run for tag pipelines.' }
-if ([string]::IsNullOrWhiteSpace($env:GITHUB_TOKEN)) { Fail 'GITHUB_TOKEN is not available. It must be a masked, protected CI variable, and the tag must be protected (v*).' }
+$dryRun = $env:RELEASE_DRY_RUN -eq '1'
+if (-not $dryRun -and [string]::IsNullOrWhiteSpace($env:GITHUB_TOKEN)) { Fail 'GITHUB_TOKEN is not available. It must be a masked, protected CI variable, and the tag must be protected (v*).' }
 
+$tagMatch = [regex]::Match($tag, '^v(?<major>\d+)\.(?<minor>\d+)\.(?<patch>\d+)(?:-preview\.(?<preview>\d+))?$')
+if (-not $tagMatch.Success) { Fail "$tag is not a release tag; use v1.2.3 or v1.2.3-preview.4." }
 $version = $tag -replace '^v', ''
+$baseVersion = "$($tagMatch.Groups['major'].Value).$($tagMatch.Groups['minor'].Value).$($tagMatch.Groups['patch'].Value)"
+$isPreview = $tagMatch.Groups['preview'].Success
+$isRust = [int]$tagMatch.Groups['major'].Value -ge 2
+$displayVersion = $(if ($isPreview) { "$baseVersion Preview $($tagMatch.Groups['preview'].Value)" } else { $version })
+
+$root = Get-Setting 'CI_PROJECT_DIR' (Split-Path -Parent $PSScriptRoot)
 $repository = Get-Setting 'GITHUB_REPOSITORY' 'tnoahc/RobustCopy'
 $githubApi = (Get-Setting 'GITHUB_API_URL' 'https://api.github.com').TrimEnd('/')
 $githubUploads = (Get-Setting 'GITHUB_UPLOADS_URL' 'https://uploads.github.com').TrimEnd('/')
 $githubGit = Get-Setting 'GITHUB_GIT_URL' "https://github.com/$repository.git"
-$publishDir = Join-Path $env:CI_PROJECT_DIR 'artifacts\publish'
+$publishDir = Join-Path $root 'artifacts\publish'
 $assets = @('RobustCopy.exe', 'RobustCopy.exe.sha256', 'RobustCopy.pdb')
 
-# 1. Build the self-contained executable and its checksum.
+# 1. Check that the tag matches the version of the app it releases.
+if ($isRust)
+{
+    $cargoToml = Join-Path $root 'rust\Cargo.toml'
+    $projectVersion = [regex]::Match((Get-Content -Raw -LiteralPath $cargoToml), '(?m)^version\s*=\s*"([^"]+)"').Groups[1].Value
+    $versionSource = 'rust\Cargo.toml'
+}
+else
+{
+    $csproj = Join-Path $root 'src\RobustCopy\RobustCopy.csproj'
+    $projectVersion = (Select-Xml -LiteralPath $csproj -XPath '//Version' | Select-Object -First 1).Node.InnerText
+    $versionSource = 'src\RobustCopy\RobustCopy.csproj'
+}
+if ($projectVersion -ne $baseVersion) { Fail "$tag does not match version $projectVersion in $versionSource." }
+Write-Host "Releasing RobustCopy $displayVersion ($(if ($isRust) { 'Rust' } else { 'WPF' }) app)"
+
+# 2. Build the executable and its checksum.
 if ($env:RELEASE_SKIP_BUILD -ne '1')
 {
-    dotnet publish (Join-Path $env:CI_PROJECT_DIR 'src\RobustCopy\RobustCopy.csproj') --configuration Release --runtime win-x64 --self-contained true --output $publishDir
-    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    if ($isRust)
+    {
+        cargo build --release --locked --manifest-path $cargoToml
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        $targetDir = Get-Setting 'CARGO_TARGET_DIR' (Join-Path $root 'rust\target')
+        New-Item -ItemType Directory -Force -Path $publishDir | Out-Null
+        foreach ($file in 'RobustCopy.exe', 'RobustCopy.pdb')
+        {
+            Copy-Item -LiteralPath (Join-Path $targetDir "release\$file") -Destination $publishDir -Force
+        }
+    }
+    else
+    {
+        dotnet publish (Join-Path $root 'src\RobustCopy\RobustCopy.csproj') --configuration Release --runtime win-x64 --self-contained true --output $publishDir
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    }
 }
 
 $exe = Join-Path $publishDir 'RobustCopy.exe'
@@ -66,9 +114,10 @@ foreach ($asset in $assets)
     if (-not (Test-Path -LiteralPath (Join-Path $publishDir $asset))) { Fail "$asset is missing from $publishDir." }
 }
 
-# 2. Release notes: the README's "What's new in <version>" section, plus the checksum.
-$readme = (Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $env:CI_PROJECT_DIR 'README.md')) -replace "`r`n", "`n"
-$heading = "### What's new in $version"
+# 3. Release notes: the README's "What's new in <version>" section, plus the checksum.
+#    A preview's section is titled with its display name, for example "What's new in 2.1.0 Preview 1".
+$readme = (Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $root 'README.md')) -replace "`r`n", "`n"
+$heading = "### What's new in $displayVersion"
 $start = $readme.IndexOf($heading)
 $whatsNew = ''
 if ($start -ge 0)
@@ -84,9 +133,13 @@ else
     Write-Host "README has no '$heading' section; using generic release notes."
 }
 
+$intro = $(if ($isRust) { "Windows 10/11 x64 build of RobustCopy $displayVersion, the Rust rewrite. A single executable with no .NET or other runtime to install." }
+    else { "Self-contained Windows 10/11 x64 build of RobustCopy $displayVersion. No separate .NET installation is required." })
+if ($isPreview) { $intro = "**Pre-release** for testing; the latest stable release remains the recommended download.`n`n$intro" }
+
 $fence = '```'
 $notes = (
-    "Self-contained Windows 10/11 x64 build of RobustCopy $version. No separate .NET installation is required.",
+    $intro,
     '',
     $whatsNew,
     '',
@@ -100,13 +153,27 @@ $notes = (
 ) -join "`n"
 $notes = [regex]::Replace($notes, "`n{3,}", "`n`n")
 
+# GitHub marks one release as Latest. Give it to the highest stable version, so a 1.x maintenance
+# release never displaces 2.x, and previews never take it. Requires the tags (GIT_DEPTH: 0 fetches them).
+$stableVersions = @(git tag --list 'v*' | Where-Object { $_ -match '^v\d+\.\d+\.\d+$' } | ForEach-Object { [version]($_ -replace '^v', '') })
+$highestStable = $stableVersions + [version]$baseVersion | Sort-Object | Select-Object -Last 1
+$makeLatest = $(if (-not $isPreview -and [version]$baseVersion -ge $highestStable) { 'true' } else { 'false' })
+
+if ($dryRun)
+{
+    Write-Host "Dry run: would publish '$tag' as 'RobustCopy $displayVersion' (prerelease: $isPreview, latest: $makeLatest) with $($assets -join ', ')."
+    Write-Host '--- Release notes ---'
+    Write-Host $notes
+    exit 0
+}
+
 $githubHeaders = @{
     Authorization          = "Bearer $env:GITHUB_TOKEN"
     Accept                 = 'application/vnd.github+json'
     'X-GitHub-Api-Version' = '2022-11-28'
 }
 
-# 3. Make sure GitHub has the tag (and the commits it needs). Requires a full clone (GIT_DEPTH: 0).
+# 4. Make sure GitHub has the tag (and the commits it needs). Requires a full clone (GIT_DEPTH: 0).
 $tagRef = "refs/tags/$tag"
 git rev-parse -q --verify $tagRef | Out-Null
 if ($LASTEXITCODE -ne 0)
@@ -119,9 +186,9 @@ Write-Host "Pushing $tag to GitHub ($repository)"
 git -c credential.helper= -c "http.extraHeader=Authorization: Basic $basic" push --quiet $githubGit "${tagRef}:${tagRef}"
 if ($LASTEXITCODE -ne 0) { Fail "Pushing $tag to GitHub failed. If GitHub already has a different $tag, delete it there first." }
 
-# 4. GitHub release: create as a draft, upload the assets, then publish, so a failed upload never
+# 5. GitHub release: create as a draft, upload the assets, then publish, so a failed upload never
 #    leaves a public release without its files.
-$releaseBody = @{ tag_name = $tag; name = "RobustCopy $version"; body = $notes; draft = $true } | ConvertTo-Json
+$releaseBody = @{ tag_name = $tag; name = "RobustCopy $displayVersion"; body = $notes; draft = $true; prerelease = $isPreview } | ConvertTo-Json
 try
 {
     $release = Invoke-RestMethod -Method Post -Uri "$githubApi/repos/$repository/releases" -Headers $githubHeaders `
@@ -156,7 +223,7 @@ foreach ($asset in $assets)
 try
 {
     $published = Invoke-RestMethod -Method Patch -Uri "$githubApi/repos/$repository/releases/$($release.id)" -Headers $githubHeaders `
-        -ContentType 'application/json; charset=utf-8' -Body ([Text.Encoding]::UTF8.GetBytes((@{ draft = $false; make_latest = 'true' } | ConvertTo-Json))) -UseBasicParsing
+        -ContentType 'application/json; charset=utf-8' -Body ([Text.Encoding]::UTF8.GetBytes((@{ draft = $false; make_latest = $makeLatest } | ConvertTo-Json))) -UseBasicParsing
 }
 catch
 {
@@ -164,7 +231,7 @@ catch
 }
 Write-Host "Published $($published.html_url)"
 
-# 5. GitLab release that links to the GitHub files (a small request, so the proxy is not an issue).
+# 6. GitLab release that links to the GitHub files (a small request, so the proxy is not an issue).
 $gitlabLinks = foreach ($link in $links)
 {
     $name = $(if ($link.name -eq 'RobustCopy.pdb') { 'RobustCopy.pdb (debug symbols)' } else { $link.name })
@@ -173,7 +240,7 @@ $gitlabLinks = foreach ($link in $links)
 }
 $gitlabRelease = [ordered]@{
     tag_name    = $tag
-    name        = "RobustCopy $version"
+    name        = "RobustCopy $displayVersion"
     description = "$notes`n`nThe files are hosted on the [GitHub release]($($published.html_url))."
     assets      = @{ links = @($gitlabLinks) }
 }

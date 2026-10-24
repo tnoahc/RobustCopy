@@ -1,6 +1,7 @@
 # GitLab CI pipeline for RobustCopy (issue #12).
 #
-# RobustCopy is a WPF application and its integration tests drive the real
+# RobustCopy has two apps: RobustCopy 1, a WPF application (src/), and
+# RobustCopy 2, its Rust rewrite (rust/). Both test suites drive the real
 # C:\Windows\System32\robocopy.exe, so every job must run on a Windows shell
 # runner using the PowerShell executor (shell = "powershell" or "pwsh").
 # Docker executors cannot build WPF or run robocopy.
@@ -23,6 +24,10 @@ variables:
   DOTNET_NOLOGO: "true"
   DOTNET_CLI_TELEMETRY_OPTOUT: "true"
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: "true"
+  # Keep Rust build output outside the project directory, so the clean checkout
+  # each job starts from does not delete it and cargo only rebuilds what changed.
+  CARGO_TARGET_DIR: "$CI_BUILDS_DIR\\cargo-target\\$CI_PROJECT_PATH_SLUG"
+  CARGO_TERM_COLOR: "never"
 
 default:
   # PLACEHOLDER: the repository owner must confirm this tag matches the
@@ -70,8 +75,35 @@ test:
     - dotnet run --project tests\RobustCopy.Tests\RobustCopy.Tests.csproj --configuration Release
     - if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+# The Rust jobs need the stable Rust toolchain for MSVC (rustup) and the Visual
+# Studio Build Tools C++ workload with the Windows SDK on the runner.
+.rust:
+  cache: []
+  before_script:
+    - $ErrorActionPreference = "Stop"
+    - if (-not (Get-Command cargo -ErrorAction SilentlyContinue)) { throw "cargo was not found. Install Rust (rustup, MSVC toolchain) and the Visual Studio Build Tools C++ workload on the runner." }
+    - cargo --version
+    - if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+build-rust:
+  extends: .rust
+  stage: build
+  script:
+    - cargo build --release --locked --manifest-path rust\Cargo.toml
+    - if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+test-rust:
+  extends: .rust
+  stage: test
+  script:
+    # Includes the Robocopy integration tests in rust\tests\robocopy.rs.
+    - cargo test --locked --manifest-path rust\Cargo.toml
+    - if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
 # Tagged builds are released by ci/release.ps1:
-# - builds the self-contained RobustCopy.exe and RobustCopy.exe.sha256,
+# - v1.x.y tags release the WPF app, v2.x.y tags the Rust app; a -preview.N
+#   suffix (v2.1.0-preview.1) makes a GitHub pre-release,
+# - builds RobustCopy.exe and RobustCopy.exe.sha256,
 # - pushes the tag to GitHub and creates the GitHub release with the exe,
 #   checksum, and pdb (draft first, published once every file is uploaded),
 # - creates the GitLab release with links to those GitHub files.
@@ -83,7 +115,7 @@ test:
 release:
   stage: release
   rules:
-    - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+$/
+    - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+(-preview\.\d+)?$/
   variables:
     # A full clone, so the tag and its history can be pushed to GitHub.
     GIT_DEPTH: "0"
