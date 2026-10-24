@@ -147,18 +147,19 @@ The release build is `rust\target\release\RobustCopy.exe`. Run `cargo test` in `
 
 ## Website
 
-The download page is [`index.php`](index.php), written in plain PHP 8 with no framework or dependencies. It renders a single self-contained page: [`site/styles.css`](site/styles.css), [`site/script.js`](site/script.js), the logo, and the favicon (`src/RobustCopy/Assets/RobustCopy.ico`) are inlined into it.
+The download page lives in [`site/`](site), which holds everything it needs and is served as the web root. [`site/index.php`](site/index.php) is written in plain PHP 8 with no framework or dependencies, and renders a single self-contained page: [`styles.css`](site/styles.css), [`script.js`](site/script.js), `brand-mark.png`, and `favicon.ico` are inlined into it.
 
 - [`site/releases.php`](site/releases.php) holds the version, tag, size, and SHA-256 of the current release and of RobustCopy 1. Download links are built from the tag.
 - [`site/content.php`](site/content.php) holds the repeated content: navigation, features, steps, safeguards, and requirements.
+- `site/favicon.ico` is a copy of the app icon, `src/RobustCopy/Assets/RobustCopy.ico`; update both if the icon changes.
 
 To preview it locally with XAMPP's PHP:
 
 ```powershell
-C:\xampp\php\php.exe -S localhost:8000
+C:\xampp\php\php.exe -S localhost:8000 -t site
 ```
 
-Then open <http://localhost:8000>. To serve it with Apache instead, place the repository (or `index.php`, `site/`, and `src/RobustCopy/Assets/RobustCopy.ico` with the same layout) under `C:\xampp\htdocs`.
+Then open <http://localhost:8000>. To serve it with Apache instead, copy the contents of `site/` into `C:\xampp\htdocs` (or a folder under it).
 
 ## Tests
 
