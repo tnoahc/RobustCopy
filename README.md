@@ -13,7 +13,7 @@ RobustCopy is released in two lines, side by side:
 | **RobustCopy 2** | 2.x | Rust and [egui](https://github.com/emilk/egui); a single 15 MB executable | [`rust/`](rust/README.md) |
 | **RobustCopy 1** | 1.x | .NET 10 WPF; a self-contained 62 MB executable | [`src/RobustCopy`](src/RobustCopy) |
 
-Both have the same features. RobustCopy 2 is in preview; until 2.0.0 is released, RobustCopy 1 is the recommended download.
+Both have the same features. RobustCopy 2 is the recommended download; RobustCopy 1 stays available and receives fixes as 1.x releases.
 
 The interface design references are kept in [`docs/mockups`](docs/mockups/README.md).
 
@@ -21,21 +21,21 @@ The interface design references are kept in [`docs/mockups`](docs/mockups/README
 
 Both lines are published by **Kaleb Creative Studio** for Windows 10 and Windows 11 x64. All releases are listed on the [GitHub releases page](https://github.com/tnoahc/RobustCopy/releases).
 
-### RobustCopy 1.0.2 (recommended)
+### RobustCopy 2.0.0 (recommended)
+
+- [Download RobustCopy.exe](https://github.com/tnoahc/RobustCopy/releases/download/v2.0.0/RobustCopy.exe)
+- [Download the SHA-256 checksum](https://github.com/tnoahc/RobustCopy/releases/download/v2.0.0/RobustCopy.exe.sha256)
+- [View the GitHub release](https://github.com/tnoahc/RobustCopy/releases/tag/v2.0.0)
+
+A single 15.0 MB executable with no runtime to install. The [Rust port README](rust/README.md#differences-from-the-wpf-version) lists the small differences in behaviour from RobustCopy 1.
+
+### RobustCopy 1.0.2
 
 - [Download RobustCopy.exe](https://github.com/tnoahc/RobustCopy/releases/download/v1.0.2/RobustCopy.exe)
 - [Download the SHA-256 checksum](https://github.com/tnoahc/RobustCopy/releases/download/v1.0.2/RobustCopy.exe.sha256)
 - [View the GitHub release](https://github.com/tnoahc/RobustCopy/releases/tag/v1.0.2)
 
-The 62.1 MB executable is self-contained; no separate .NET installation is required.
-
-### RobustCopy 2.0.0 Preview 1
-
-- [Download RobustCopy.exe](https://github.com/tnoahc/RobustCopy/releases/download/v2.0.0-preview.1/RobustCopy.exe)
-- [Download the SHA-256 checksum](https://github.com/tnoahc/RobustCopy/releases/download/v2.0.0-preview.1/RobustCopy.exe.sha256)
-- [View the GitHub pre-release](https://github.com/tnoahc/RobustCopy/releases/tag/v2.0.0-preview.1)
-
-A single 15.0 MB executable with no runtime to install. The [Rust port README](rust/README.md#differences-from-the-wpf-version) lists the small differences in behaviour from RobustCopy 1.
+The original .NET WPF edition. The 62.1 MB executable is self-contained; no separate .NET installation is required.
 
 ### Verify a download
 
