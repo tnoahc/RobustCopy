@@ -2,7 +2,7 @@ use std::fs::{self, File, OpenOptions};
 use std::io::{BufWriter, Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
-use std::sync::{Arc, Mutex, MutexGuard};
+use std::sync::{Arc, Condvar, Mutex, MutexGuard};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -17,6 +17,8 @@ use crate::core::models::{
 use crate::core::{app_identity, tokenizer, validator};
 
 const LOG_FLUSH_INTERVAL: Duration = Duration::from_secs(1);
+/// How long Pause waits for a copy that has started but not yet launched Robocopy.
+const PROCESS_START_TIMEOUT: Duration = Duration::from_secs(5);
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum RunnerEvent {
@@ -63,6 +65,8 @@ pub struct RobocopyRunner {
     log_directory: PathBuf,
     sink: EventSink,
     state: Mutex<State>,
+    /// Signalled when the stage changes or Robocopy is published, so Pause can wait out start-up.
+    changed: Condvar,
     log: Mutex<LogState>,
     /// Serializes output handling so tracker updates and their events stay in order.
     output: Mutex<Option<ProgressTracker>>,
@@ -76,6 +80,7 @@ impl RobocopyRunner {
             log_directory,
             sink,
             state: Mutex::default(),
+            changed: Condvar::new(),
             log: Mutex::default(),
             output: Mutex::default(),
             control: Mutex::default(),
@@ -88,6 +93,7 @@ impl RobocopyRunner {
 
     fn set_stage(&self, stage: CopyJobStage) {
         self.state().stage = stage;
+        self.changed.notify_all();
     }
 
     fn emit(&self, event: RunnerEvent) {
@@ -150,6 +156,7 @@ impl RobocopyRunner {
             state.child = Some(Arc::clone(&child));
             state.stopped_by_user
         };
+        self.changed.notify_all();
 
         if stopped_during_startup {
             // Stop ran before the process was published, so it could not kill it.
@@ -420,7 +427,13 @@ impl CopyRunner for RobocopyRunner {
         let _control = lock(&self.control);
         let not_running = || RunError::Failed("There is no running copy to pause.".to_owned());
         let child = {
-            let state = self.state();
+            // Start reports Running before Robocopy is launched, so wait for the process instead of failing.
+            let (state, _) = self
+                .changed
+                .wait_timeout_while(self.state(), PROCESS_START_TIMEOUT, |state| {
+                    state.stage == CopyJobStage::Running && state.child.is_none()
+                })
+                .unwrap_or_else(|poisoned| poisoned.into_inner());
             if state.stage != CopyJobStage::Running {
                 return Err(not_running());
             }
