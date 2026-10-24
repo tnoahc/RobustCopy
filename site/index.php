@@ -1,11 +1,12 @@
 <?php
 declare(strict_types=1);
 
-// RobustCopy website. Release details live in site/releases.php and repeated content in
-// site/content.php. Styles, script, and images are inlined so the page is a single response.
+// RobustCopy website. Everything it needs is in this folder: release details in releases.php,
+// repeated content in content.php, and the styles, script, logo, and favicon, which are inlined
+// so the page is a single response. Serve this folder as the web root.
 
-$releases = require __DIR__ . '/site/releases.php';
-$content = require __DIR__ . '/site/content.php';
+$releases = require __DIR__ . '/releases.php';
+$content = require __DIR__ . '/content.php';
 $current = $releases['current'];
 $classic = $releases['classic'];
 $repository = $content['repository'];
@@ -46,14 +47,14 @@ $title = 'RobustCopy — Reliable Windows file transfers';
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark">
   <meta name="theme-color" content="#0a1012">
-  <link rel="icon" type="image/x-icon" href="<?= data_uri(__DIR__ . '/src/RobustCopy/Assets/RobustCopy.ico', 'image/x-icon') ?>">
+  <link rel="icon" type="image/x-icon" href="<?= data_uri(__DIR__ . '/favicon.ico', 'image/x-icon') ?>">
   <meta name="description" content="Download RobustCopy, a private Windows desktop interface for reliable Robocopy file transfers.">
   <meta property="og:title" content="<?= e($title) ?>">
   <meta property="og:description" content="A focused desktop interface for Robocopy with safe presets, live progress, and local transcripts.">
   <meta property="og:type" content="website">
   <title><?= e($title) ?></title>
   <style>
-<?php readfile(__DIR__ . '/site/styles.css'); ?>
+<?php readfile(__DIR__ . '/styles.css'); ?>
   </style>
 </head>
 <body>
@@ -62,7 +63,7 @@ $title = 'RobustCopy — Reliable Windows file transfers';
   <header class="site-header">
     <div class="shell nav">
       <a class="brand" href="#top" aria-label="RobustCopy home">
-        <img class="brand-mark" src="<?= data_uri(__DIR__ . '/site/brand-mark.png', 'image/png') ?>" alt="">
+        <img class="brand-mark" src="<?= data_uri(__DIR__ . '/brand-mark.png', 'image/png') ?>" alt="">
         <span>RobustCopy</span>
       </a>
       <nav class="nav-links" aria-label="Primary navigation">
@@ -282,7 +283,7 @@ $title = 'RobustCopy — Reliable Windows file transfers';
   </footer>
 
   <script>
-<?php readfile(__DIR__ . '/site/script.js'); ?>
+<?php readfile(__DIR__ . '/script.js'); ?>
   </script>
 </body>
 </html>
